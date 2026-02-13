@@ -715,7 +715,7 @@
         const ctx = canvas.getContext('2d');
         const hero = canvas.parentElement;
         let embers = [];
-        const EMBER_COUNT = 45;
+        const EMBER_COUNT = 50;
 
         function resize() {
             canvas.width = hero.offsetWidth;
@@ -724,71 +724,167 @@
         resize();
         window.addEventListener('resize', resize);
 
-        function createEmber() {
+        // Simplex-like noise for organic turbulence
+        function noise(x, y) {
+            const s = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+            return s - Math.floor(s);
+        }
+
+        function createEmber(seed) {
+            const isSpark = Math.random() < 0.3;
             return {
                 x: Math.random() * canvas.width,
-                y: canvas.height + Math.random() * 40,
-                size: Math.random() * 3 + 1.5,
-                speedY: Math.random() * 0.4 + 0.15,
-                speedX: (Math.random() - 0.5) * 0.3,
-                drift: Math.random() * Math.PI * 2,
-                driftSpeed: Math.random() * 0.003 + 0.001,
-                opacity: Math.random() * 0.6 + 0.3,
-                flickerSpeed: Math.random() * 0.02 + 0.01,
-                flickerOffset: Math.random() * Math.PI * 2,
-                hue: Math.random() * 30,          // 0=red, 30=orange-yellow
+                y: canvas.height + Math.random() * 60,
+                // Irregular shape: width vs height ratio
+                w: isSpark ? Math.random() * 1.5 + 0.5 : Math.random() * 2.5 + 1.5,
+                h: isSpark ? Math.random() * 1 + 0.3 : Math.random() * 1.5 + 0.8,
+                // Movement
+                speedY: isSpark ? Math.random() * 0.8 + 0.3 : Math.random() * 0.7 + 0.4,
+                speedX: 0,
+                baseSpeedX: (Math.random() - 0.5) * 0.15,
+                // Turbulence
+                turbSeed: Math.random() * 1000,
+                turbScale: Math.random() * 0.002 + 0.001,
+                turbStrength: Math.random() * 0.6 + 0.2,
+                // Rotation
+                angle: Math.random() * Math.PI * 2,
+                rotSpeed: (Math.random() - 0.5) * 0.015,
+                // Appearance
+                opacity: isSpark ? Math.random() * 0.5 + 0.4 : Math.random() * 0.7 + 0.3,
+                // Flicker: multiple overlapping sine waves for irregular pulsing
+                flicker1: { speed: Math.random() * 0.04 + 0.01, offset: Math.random() * Math.PI * 2, amp: 0.2 },
+                flicker2: { speed: Math.random() * 0.09 + 0.03, offset: Math.random() * Math.PI * 2, amp: 0.15 },
+                flicker3: { speed: Math.random() * 0.2 + 0.05, offset: Math.random() * Math.PI * 2, amp: 0.1 },
+                // Color: starts hot (yellow-white), cools to deep red as it rises
+                startHue: Math.random() * 15 + 25,   // 25-40 (orange-yellow)
+                endHue: Math.random() * 10,            // 0-10 (deep red)
+                startLight: Math.random() * 15 + 60,  // 60-75% (bright)
+                endLight: Math.random() * 10 + 20,    // 20-30% (dim ember)
+                startSat: 100,
+                endSat: Math.random() * 20 + 80,
+                isSpark: isSpark,
+                // Lifecycle
                 life: 0,
-                maxLife: Math.random() * 600 + 400
+                maxLife: isSpark ? Math.random() * 300 + 150 : Math.random() * 800 + 500,
+                // Trail history for afterglow
+                trail: [],
+                trailMax: isSpark ? 3 : 6
             };
         }
 
         for (let i = 0; i < EMBER_COUNT; i++) {
             const e = createEmber();
-            e.y = Math.random() * canvas.height;
-            e.life = Math.random() * e.maxLife;
+            // Stagger initial life so they don't all spawn at once, but keep y at bottom
+            e.life = Math.random() * -200 | 0;
             embers.push(e);
         }
 
+        let time = 0;
+
         function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Slight motion blur: dim previous frame instead of clearing
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillStyle = 'rgba(0,0,0,0.15)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.globalCompositeOperation = 'lighter';
+
+            time++;
 
             for (let i = embers.length - 1; i >= 0; i--) {
                 const e = embers[i];
                 e.life++;
-                e.drift += e.driftSpeed;
-                e.y -= e.speedY;
-                e.x += e.speedX + Math.sin(e.drift) * 0.2;
 
-                // Fade in at start, fade out at end of life or top of canvas
+                // Turbulent movement using noise
+                const nx = noise(e.turbSeed + time * e.turbScale, e.y * 0.01);
+                const ny = noise(e.y * 0.01, e.turbSeed + time * e.turbScale);
+                e.speedX = e.baseSpeedX + (nx - 0.5) * e.turbStrength;
+
+                // Slight upward acceleration (hot air rises faster)
+                const accel = 1 + (1 - e.y / canvas.height) * 0.15;
+                e.y -= e.speedY * accel;
+                e.x += e.speedX;
+                e.angle += e.rotSpeed;
+
+                // Life ratios
                 const lifeRatio = e.life / e.maxLife;
-                const fadeIn = Math.min(e.life / 60, 1);
-                const fadeOut = 1 - Math.max((lifeRatio - 0.7) / 0.3, 0);
-                const flicker = 0.7 + 0.3 * Math.sin(e.life * e.flickerSpeed + e.flickerOffset);
+                const fadeIn = Math.min(e.life / 40, 1);
+                const fadeOut = lifeRatio > 0.6 ? 1 - ((lifeRatio - 0.6) / 0.4) : 1;
+
+                // Multi-wave flicker for realistic irregular pulsing
+                const f1 = e.flicker1.amp * Math.sin(e.life * e.flicker1.speed + e.flicker1.offset);
+                const f2 = e.flicker2.amp * Math.sin(e.life * e.flicker2.speed + e.flicker2.offset);
+                const f3 = e.flicker3.amp * Math.sin(e.life * e.flicker3.speed + e.flicker3.offset);
+                const flicker = Math.max(0.3, 1 + f1 + f2 + f3);
                 const alpha = e.opacity * fadeIn * fadeOut * flicker;
 
-                if (e.life > e.maxLife || e.y < -20) {
+                if (e.life > e.maxLife || e.y < -30 || alpha < 0.01) {
                     embers[i] = createEmber();
                     continue;
                 }
 
-                // Ember glow
-                const gradient = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.size * 4);
-                gradient.addColorStop(0, `hsla(${15 + e.hue}, 95%, 55%, ${alpha})`);
-                gradient.addColorStop(0.3, `hsla(${10 + e.hue}, 90%, 45%, ${alpha * 0.5})`);
-                gradient.addColorStop(1, `hsla(${5 + e.hue}, 85%, 30%, 0)`);
+                // Color cools as ember rises (hot→cool transition)
+                const coolRatio = Math.pow(lifeRatio, 0.7);
+                const hue = e.startHue + (e.endHue - e.startHue) * coolRatio;
+                const sat = e.startSat + (e.endSat - e.startSat) * coolRatio;
+                const light = e.startLight + (e.endLight - e.startLight) * coolRatio;
 
+                // Store trail position
+                e.trail.push({ x: e.x, y: e.y, alpha: alpha });
+                if (e.trail.length > e.trailMax) e.trail.shift();
+
+                ctx.save();
+
+                // Draw faint trail (afterglow)
+                for (let t = 0; t < e.trail.length - 1; t++) {
+                    const tp = e.trail[t];
+                    const trailAlpha = tp.alpha * (t / e.trail.length) * 0.25;
+                    if (trailAlpha < 0.01) continue;
+                    const trailSize = (e.w + e.h) * 0.3 * (t / e.trail.length);
+                    ctx.beginPath();
+                    ctx.arc(tp.x, tp.y, trailSize, 0, Math.PI * 2);
+                    ctx.fillStyle = `hsla(${hue - 5}, ${sat}%, ${light * 0.6}%, ${trailAlpha})`;
+                    ctx.fill();
+                }
+
+                // Draw ember with rotation for irregular shape
+                ctx.translate(e.x, e.y);
+                ctx.rotate(e.angle);
+
+                // Outer glow
+                const glowR = Math.max(e.w, e.h) * 5;
+                const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, glowR);
+                glow.addColorStop(0, `hsla(${hue}, ${sat}%, ${light}%, ${alpha * 0.5})`);
+                glow.addColorStop(0.25, `hsla(${hue - 5}, ${sat}%, ${light * 0.7}%, ${alpha * 0.2})`);
+                glow.addColorStop(1, `hsla(${hue - 10}, ${sat * 0.8}%, ${light * 0.4}%, 0)`);
                 ctx.beginPath();
-                ctx.arc(e.x, e.y, e.size * 4, 0, Math.PI * 2);
-                ctx.fillStyle = gradient;
+                ctx.ellipse(0, 0, glowR, glowR * 0.8, 0, 0, Math.PI * 2);
+                ctx.fillStyle = glow;
                 ctx.fill();
 
-                // Bright ember core
+                // Ember body (irregular ellipse, not a perfect circle)
+                const bodyGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, e.w);
+                bodyGrad.addColorStop(0, `hsla(${hue + 8}, 100%, ${Math.min(light + 20, 90)}%, ${alpha * 0.95})`);
+                bodyGrad.addColorStop(0.5, `hsla(${hue}, ${sat}%, ${light}%, ${alpha * 0.7})`);
+                bodyGrad.addColorStop(1, `hsla(${hue - 8}, ${sat * 0.9}%, ${light * 0.5}%, ${alpha * 0.1})`);
                 ctx.beginPath();
-                ctx.arc(e.x, e.y, e.size * 0.6, 0, Math.PI * 2);
-                ctx.fillStyle = `hsla(${25 + e.hue}, 100%, 70%, ${alpha * 0.9})`;
+                ctx.ellipse(0, 0, e.w, e.h, 0, 0, Math.PI * 2);
+                ctx.fillStyle = bodyGrad;
                 ctx.fill();
+
+                // Hot bright core (off-center for realism)
+                const coreOffX = (Math.random() - 0.5) * e.w * 0.2;
+                const coreOffY = (Math.random() - 0.5) * e.h * 0.2;
+                const coreSize = Math.min(e.w, e.h) * 0.35;
+                ctx.beginPath();
+                ctx.arc(coreOffX, coreOffY, coreSize, 0, Math.PI * 2);
+                ctx.fillStyle = `hsla(${hue + 15}, 100%, ${Math.min(light + 30, 95)}%, ${alpha * 0.85})`;
+                ctx.fill();
+
+                ctx.restore();
             }
 
+            // Reset composite for next clear
+            ctx.globalCompositeOperation = 'source-over';
             requestAnimationFrame(animate);
         }
         animate();
