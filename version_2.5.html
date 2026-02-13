@@ -722,9 +722,9 @@
         const hero = canvas.parentElement;
         let embers = [];
         const FAST_EMBERS = true;
-        const EMBER_DENSITY = 200 / (1920 * 1080);
+        const EMBER_DENSITY = 100000 / (1920 * 1080);
         const REF_HEIGHT = 1080;
-        const MAX_EMBERS = 300;
+        const MAX_EMBERS = 10000;
 
         let emberCount, speedScale, driftScale;
 
@@ -793,19 +793,18 @@
                     float d = length(gl_PointCoord - 0.5) * 2.0;
                     if (d > 1.0) discard;
 
-                    // Layer 1: Outer glow — 4-stop radial gradient matching Canvas2D
-                    // stops at 0, 0.15, 0.5, 1.0
+                    // Layer 1: Outer glow — tighter falloff, less diffuse
                     float glowA;
                     vec3 glowC = v_glowColor.rgb;
-                    if (d < 0.15) {
-                        glowA = mix(v_glowColor.a, v_glowColor.a * 0.43, d / 0.15);
-                        glowC = mix(v_glowColor.rgb, v_glowColor.rgb * 0.85, d / 0.15);
-                    } else if (d < 0.5) {
-                        glowA = mix(v_glowColor.a * 0.43, v_glowColor.a * 0.14, (d - 0.15) / 0.35);
-                        glowC = mix(v_glowColor.rgb * 0.85, v_glowColor.rgb * 0.6, (d - 0.15) / 0.35);
+                    if (d < 0.1) {
+                        glowA = v_glowColor.a;
+                        glowC = v_glowColor.rgb;
+                    } else if (d < 0.35) {
+                        glowA = mix(v_glowColor.a, v_glowColor.a * 0.2, (d - 0.1) / 0.25);
+                        glowC = mix(v_glowColor.rgb, v_glowColor.rgb * 0.7, (d - 0.1) / 0.25);
                     } else {
-                        glowA = mix(v_glowColor.a * 0.14, 0.0, (d - 0.5) / 0.5);
-                        glowC = v_glowColor.rgb * 0.45;
+                        glowA = mix(v_glowColor.a * 0.2, 0.0, (d - 0.35) / 0.65);
+                        glowC = v_glowColor.rgb * 0.4;
                     }
 
                     // Layer 2: Body — smaller radial gradient
@@ -919,12 +918,14 @@
         requestAnimationFrame(() => resize());
         window.addEventListener('resize', resize);
 
-        // ── Mouse tracking ──
+        // ── Mouse tracking with per-frame velocity ──
         let mouseX = -9999, mouseY = -9999;
+        let framePrevMX = -9999, framePrevMY = -9999;
+        let frameVX = 0, frameVY = 0;
         let mouseMoving = false;
         let mouseStopTimer = null;
-        const MOUSE_RADIUS = 120;
-        const MOUSE_FORCE = 6;
+        const MOUSE_RADIUS = 200;
+        const MOUSE_FORCE = 0.06;
         hero.addEventListener('mousemove', (ev) => {
             const rect = canvas.getBoundingClientRect();
             mouseX = ev.clientX - rect.left;
@@ -934,7 +935,9 @@
             mouseStopTimer = setTimeout(() => { mouseMoving = false; }, 50);
         });
         hero.addEventListener('mouseleave', () => {
-            mouseX = -9999; mouseY = -9999; mouseMoving = false;
+            mouseX = -9999; mouseY = -9999;
+            framePrevMX = -9999; framePrevMY = -9999;
+            mouseMoving = false;
         });
 
         // ── Noise ──
@@ -1020,6 +1023,15 @@
             // Switch to additive blending for embers
             gl.blendFunc(gl.ONE, gl.ONE);
 
+            // Compute per-frame mouse velocity (prev frame pos → current pos)
+            if (mouseMoving && framePrevMX > -9000) {
+                frameVX = mouseX - framePrevMX;
+                frameVY = mouseY - framePrevMY;
+            } else {
+                frameVX = 0;
+                frameVY = 0;
+            }
+
             time++;
             let count = 0;
 
@@ -1037,15 +1049,30 @@
                     + Math.sin(e.swirl3.phase) * e.swirl3.amp;
                 e.speedX = e.baseSpeedX + (nx - 0.5) * e.turbStrength + swirl;
 
-                // Mouse repulsion
-                const dx = e.x - mouseX;
-                const dy = e.y - mouseY;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (mouseMoving && dist < MOUSE_RADIUS && dist > 0) {
-                    const proximity = 1 - dist / MOUSE_RADIUS;
-                    const force = proximity * proximity * proximity * MOUSE_FORCE;
-                    e.vx += (dx / dist) * force;
-                    e.vy += (dy / dist) * force;
+                // Mouse repulsion — perpendicular distance to mouse path vector
+                const fmSpeed = Math.sqrt(frameVX * frameVX + frameVY * frameVY);
+                if (mouseMoving && fmSpeed > 0.5) {
+                    // Closest point on segment (prevFrame → current) to ember
+                    const segLenSq = frameVX * frameVX + frameVY * frameVY;
+                    let t = ((e.x - framePrevMX) * frameVX + (e.y - framePrevMY) * frameVY) / segLenSq;
+                    t = Math.max(0, Math.min(1, t));
+                    const closestX = framePrevMX + t * frameVX;
+                    const closestY = framePrevMY + t * frameVY;
+                    // Perpendicular vector from segment to ember
+                    const px = e.x - closestX;
+                    const py = e.y - closestY;
+                    const perpDist = Math.sqrt(px * px + py * py);
+                    if (perpDist < MOUSE_RADIUS && perpDist > 0) {
+                        const proximity = 1 - perpDist / MOUSE_RADIUS;
+                        const force = proximity * proximity * proximity * MOUSE_FORCE * fmSpeed;
+                        // Blend: mostly mouse direction + slight perpendicular scatter
+                        const mdx = frameVX / fmSpeed;  // mouse direction normalized
+                        const mdy = frameVY / fmSpeed;
+                        const pdx = px / perpDist;       // perpendicular direction normalized
+                        const pdy = py / perpDist;
+                        e.vx += (mdx * 0.75 + pdx * 0.25) * force;
+                        e.vy += (mdy * 0.75 + pdy * 0.25) * force;
+                    }
                 }
                 e.vx *= 0.97;
                 e.vy *= 0.97;
@@ -1093,22 +1120,22 @@
                 const ci = count * 4;
                 posArr[count * 2]     = e.x;
                 posArr[count * 2 + 1] = e.y;
-                sizeArr[count]        = glowR * 2;  // point diameter = glow diameter
+                sizeArr[count]        = glowR * 1.4;  // smaller point diameter
 
                 glowColorArr[ci]     = gr;
                 glowColorArr[ci + 1] = gg;
                 glowColorArr[ci + 2] = gb;
-                glowColorArr[ci + 3] = alpha * 0.35;
+                glowColorArr[ci + 3] = alpha * 0.55;
 
                 bodyColorArr[ci]     = br;
                 bodyColorArr[ci + 1] = bg;
                 bodyColorArr[ci + 2] = bb;
-                bodyColorArr[ci + 3] = alpha * 0.7;
+                bodyColorArr[ci + 3] = alpha * 0.9;
 
                 coreColorArr[ci]     = cr;
                 coreColorArr[ci + 1] = cg;
                 coreColorArr[ci + 2] = cb;
-                coreColorArr[ci + 3] = alpha * 0.6;
+                coreColorArr[ci + 3] = alpha * 0.85;
 
                 bodyRatioArr[count] = bodyR;
                 coreRatioArr[count] = coreR;
@@ -1134,6 +1161,10 @@
             uploadAttr(coreRatioBuf, eLoc.coreRatio, coreRatioArr, 1, count);
 
             gl.drawArrays(gl.POINTS, 0, count);
+
+            // Store mouse position for next frame's segment
+            framePrevMX = mouseX;
+            framePrevMY = mouseY;
 
             requestAnimationFrame(animate);
         }
