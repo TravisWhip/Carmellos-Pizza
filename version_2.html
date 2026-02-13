@@ -715,7 +715,10 @@
         const ctx = canvas.getContext('2d');
         const hero = canvas.parentElement;
         let embers = [];
-        const EMBER_COUNT = 50;
+        const EMBER_COUNT = 500;
+        const FAST_EMBERS = true;
+        const emberYScalar = !FAST_EMBERS ? 1 : 2;
+        const emberXScalar = !FAST_EMBERS ? 1 : 10;
 
         function resize() {
             canvas.width = hero.offsetWidth;
@@ -739,9 +742,9 @@
                 w: isSpark ? Math.random() * 1.5 + 0.5 : Math.random() * 2.5 + 1.5,
                 h: isSpark ? Math.random() * 1 + 0.3 : Math.random() * 1.5 + 0.8,
                 // Movement
-                speedY: isSpark ? Math.random() * 0.8 + 0.3 : Math.random() * 0.7 + 0.4,
+                speedY: (isSpark ? Math.random() * 0.8 + 0.3 : Math.random() * 0.7 + 0.4) * emberYScalar,
                 speedX: 0,
-                baseSpeedX: (Math.random() - 0.5) * 0.25,
+                baseSpeedX: (Math.random() - 0.5) * 0.25 * emberXScalar,
                 // Turbulence
                 turbSeed: Math.random() * 1000,
                 turbScale: Math.random() * 0.002 + 0.001,
@@ -873,8 +876,8 @@
                 ctx.translate(e.x, e.y);
                 ctx.rotate(e.angle);
 
-                // Outer glow (large soft radius)
-                const glowR = Math.max(e.w, e.h) * 12;
+                // Outer glow (soft radius)
+                const glowR = Math.max(e.w, e.h) * 1;
                 const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, glowR);
                 glow.addColorStop(0, `hsla(${hue}, ${sat}%, ${light}%, ${alpha * 0.35})`);
                 glow.addColorStop(0.15, `hsla(${hue - 5}, ${sat}%, ${light * 0.7}%, ${alpha * 0.15})`);
