@@ -1,0 +1,733 @@
+# Cyberpunk Brick Oven Pizza Website
+
+I'll create a cyberpunk-style redesign of your pizza website with neon aesthetics, glitch effects, and a futuristic feel - all in a single HTML file.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carmelo's Brick Oven - Cyberpunk Edition</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Exo+2:wght@300;400;600&display=swap');
+
+        :root {
+            --neon-pink: #ff00ff;
+            --neon-blue: #00ffff;
+            --neon-purple: #8a2be2;
+            --neon-green: #00ff00;
+            --dark-bg: #0a0a15;
+            --darker-bg: #05050a;
+            --card-bg: rgba(10, 10, 20, 0.8);
+            --text-light: #f0f0ff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--dark-bg);
+            color: var(--text-light);
+            font-family: 'Exo 2', sans-serif;
+            overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        /* Cyberpunk grid background */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(rgba(10, 10, 20, 0.8) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(10, 10, 20, 0.8) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: -1;
+            opacity: 0.7;
+        }
+
+        /* Glitch effect for header */
+        .glitch {
+            position: relative;
+        }
+
+        .glitch::before,
+        .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .glitch::before {
+            left: 2px;
+            text-shadow: -2px 0 var(--neon-pink);
+            clip: rect(44px, 450px, 56px, 0);
+            animation: glitch-anim 5s infinite linear alternate-reverse;
+        }
+
+        .glitch::after {
+            left: -2px;
+            text-shadow: -2px 2px var(--neon-blue);
+            clip: rect(44px, 450px, 56px, 0);
+            animation: glitch-anim2 5s infinite linear alternate-reverse;
+        }
+
+        @keyframes glitch-anim {
+            0% { clip: rect(42px, 9999px, 44px, 0); }
+            5% { clip: rect(12px, 9999px, 59px, 0); }
+            10% { clip: rect(48px, 9999px, 29px, 0); }
+            15% { clip: rect(42px, 9999px, 73px, 0); }
+            20% { clip: rect(63px, 9999px, 27px, 0); }
+            25% { clip: rect(34px, 9999px, 55px, 0); }
+            30% { clip: rect(86px, 9999px, 73px, 0); }
+            35% { clip: rect(20px, 9999px, 20px, 0); }
+            40% { clip: rect(26px, 9999px, 60px, 0); }
+            45% { clip: rect(25px, 9999px, 66px, 0); }
+            50% { clip: rect(60px, 9999px, 52px, 0); }
+            55% { clip: rect(72px, 9999px, 83px, 0); }
+            60% { clip: rect(14px, 9999px, 54px, 0); }
+            65% { clip: rect(24px, 9999px, 40px, 0); }
+            70% { clip: rect(47px, 9999px, 85px, 0); }
+            75% { clip: rect(32px, 9999px, 22px, 0); }
+            80% { clip: rect(88px, 9999px, 53px, 0); }
+            85% { clip: rect(16px, 9999px, 69px, 0); }
+            90% { clip: rect(83px, 9999px, 18px, 0); }
+            95% { clip: rect(10px, 9999px, 54px, 0); }
+            100% { clip: rect(23px, 9999px, 86px, 0); }
+        }
+
+        @keyframes glitch-anim2 {
+            0% { clip: rect(65px, 9999px, 73px, 0); }
+            5% { clip: rect(23px, 9999px, 22px, 0); }
+            10% { clip: rect(59px, 9999px, 84px, 0); }
+            15% { clip: rect(46px, 9999px, 92px, 0); }
+            20% { clip: rect(77px, 9999px, 85px, 0); }
+            25% { clip: rect(68px, 9999px, 20px, 0); }
+            30% { clip: rect(29px, 9999px, 17px, 0); }
+            35% { clip: rect(58px, 9999px, 31px, 0); }
+            40% { clip: rect(47px, 9999px, 79px, 0); }
+            45% { clip: rect(44px, 9999px, 38px, 0); }
+            50% { clip: rect(62px, 9999px, 22px, 0); }
+            55% { clip: rect(91px, 9999px, 64px, 0); }
+            60% { clip: rect(11px, 9999px, 19px, 0); }
+            65% { clip: rect(40px, 9999px, 96px, 0); }
+            70% { clip: rect(26px, 9999px, 23px, 0); }
+            75% { clip: rect(64px, 9999px, 11px, 0); }
+            80% { clip: rect(41px, 9999px, 12px, 0); }
+            85% { clip: rect(63px, 9999px, 78px, 0); }
+            90% { clip: rect(30px, 9999px, 57px, 0); }
+            95% { clip: rect(61px, 9999px, 73px, 0); }
+            100% { clip: rect(30px, 9999px, 11px, 0); }
+        }
+
+        /* Header styles */
+        header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            padding: 1.5rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(5, 5, 10, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--neon-pink);
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
+        }
+
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            background: linear-gradient(to right, var(--neon-pink), var(--neon-blue));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+            animation: pulse 2s infinite;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+        }
+
+        .nav-links li {
+            margin: 0 1.5rem;
+        }
+
+        .nav-links a {
+            color: var(--text-light);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            position: relative;
+            padding: 0.5rem 0;
+            transition: all 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--neon-blue);
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--neon-blue);
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        /* Hero section */
+        .hero {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+            padding: 0 2rem;
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(138, 43, 226, 0.2) 0%, transparent 70%);
+            z-index: -1;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            z-index: 2;
+        }
+
+        .hero h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 5rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            margin-bottom: 1rem;
+            text-shadow: 0 0 15px rgba(255, 0, 255, 0.8);
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 1.4rem;
+            margin-bottom: 2rem;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 1rem 2.5rem;
+            background: transparent;
+            color: var(--text-light);
+            border: 2px solid var(--neon-green);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-decoration: none;
+            border-radius: 0;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            margin: 0 0.5rem;
+            z-index: 1;
+        }
+
+        .btn:hover {
+            background: var(--neon-green);
+            color: var(--dark-bg);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.7);
+            transform: translateY(-3px);
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 0, 0.2), transparent);
+            transition: 0.5s;
+            z-index: -1;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        /* Menu section */
+        .menu-section {
+            padding: 5rem 5%;
+            background: var(--darker-bg);
+        }
+
+        .section-title {
+            text-align: center;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            position: relative;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            padding-bottom: 1rem;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 3px;
+            background: linear-gradient(to right, var(--neon-pink), var(--neon-blue));
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .menu-card {
+            background: var(--card-bg);
+            border: 1px solid var(--neon-blue);
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .menu-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.5);
+            border-color: var(--neon-pink);
+        }
+
+        .menu-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(to right, var(--neon-pink), var(--neon-blue));
+        }
+
+        .menu-icon {
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+            color: var(--neon-blue);
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
+        }
+
+        .menu-card h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            color: var(--neon-blue);
+        }
+
+        .price {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--neon-green);
+            margin: 1rem 0;
+        }
+
+        /* Testimonials */
+        .testimonials {
+            padding: 5rem 5%;
+            background: var(--dark-bg);
+        }
+
+        .testimonial-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .testimonial-card {
+            background: var(--card-bg);
+            border: 1px solid var(--neon-purple);
+            border-radius: 8px;
+            padding: 2rem;
+            position: relative;
+            box-shadow: 0 0 15px rgba(138, 43, 226, 0.2);
+        }
+
+        .testimonial-card::before {
+            content: '"';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 4rem;
+            font-family: 'Orbitron', sans-serif;
+            color: var(--neon-purple);
+            opacity: 0.3;
+        }
+
+        .testimonial-text {
+            margin-bottom: 1.5rem;
+            font-style: italic;
+            position: relative;
+            z-index: 1;
+        }
+
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+        }
+
+        .author-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--neon-blue);
+            margin-right: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--dark-bg);
+        }
+
+        /* Footer */
+        footer {
+            background: var(--darker-bg);
+            padding: 3rem 5%;
+            text-align: center;
+            border-top: 1px solid var(--neon-pink);
+        }
+
+        .footer-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .social-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            color: var(--neon-blue);
+            font-size: 1.5rem;
+            transition: all 0.3s ease;
+            border: 1px solid var(--neon-blue);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .social-icon:hover {
+            background: var(--neon-blue);
+            color: var(--dark-bg);
+            transform: translateY(-5px);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.7);
+        }
+
+        .copyright {
+            margin-top: 2rem;
+            color: var(--neon-purple);
+            font-size: 0.9rem;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 3rem;
+            }
+            
+            .hero p {
+                font-size: 1.1rem;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .menu-card {
+                padding: 1.5rem;
+            }
+            
+            .menu-card h3 {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0% { text-shadow: 0 0 5px rgba(255, 0, 255, 0.5); }
+            50% { text-shadow: 0 0 20px rgba(255, 0, 255, 0.9), 0 0 30px rgba(255, 0, 255, 0.6); }
+            100% { text-shadow: 0 0 5px rgba(255, 0, 255, 0.5); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        /* Floating elements */
+        .floating {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+
+        /* Neon glow effect */
+        .neon-glow {
+            text-shadow: 0 0 5px var(--neon-pink), 0 0 10px var(--neon-pink), 0 0 15px var(--neon-pink);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="logo glitch" data-text="Carmelo's Brick Oven">Carmelo's Brick Oven</div>
+        <ul class="nav-links">
+            <li><a href="#home">Home</a></li>
+            <li><a href="#menu">Menu</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#testimonials">Reviews</a></li>
+            <li><a href="#contact">Contact</a></li>
+        </ul>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="hero-content">
+            <h1 class="glitch" data-text="Carmelo's Brick Oven">Carmelo's Brick Oven</h1>
+            <p class="neon-glow">Experience the taste of tradition with a cyberpunk twist</p>
+            <div class="hero-buttons">
+                <a href="#menu" class="btn pulse">View Menu</a>
+                <a href="#contact" class="btn">Order Online</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Menu Section -->
+    <section class="menu-section" id="menu">
+        <h2 class="section-title">Our Cyberpunk Menu</h2>
+        <div class="menu-grid">
+            <div class="menu-card floating">
+                <div class="menu-icon">
+                    <i class="fas fa-pizza-slice"></i>
+                </div>
+                <h3>Neon Margherita</h3>
+                <p>Fresh mozzarella, tomatoes, and basil on our signature cyber dough</p>
+                <div class="price">$16.99</div>
+            </div>
+            <div class="menu-card floating" style="animation-delay: 0.3s;">
+                <div class="menu-icon">
+                    <i class="fas fa-fire"></i>
+                </div>
+                <h3>Electric Pepperoni</h3>
+                <p>Spicy pepperoni, jalapeños, and our signature cyber sauce</p>
+                <div class="price">$18.99</div>
+            </div>
+            <div class="menu-card floating" style="animation-delay: 0.6s;">
+                <div class="menu-icon">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <h3>Matrix Supreme</h3>
+                <p>Everything you love in a pizza with a digital twist</p>
+                <div class="price">$22.99</div>
+            </div>
+            <div class="menu-card floating" style="animation-delay: 0.9s;">
+                <div class="menu-icon">
+                    <i class="fas fa-moon"></i>
+                </div>
+                <h3>Stellar Mushroom</h3>
+                <p>Wild mushrooms, truffle oil, and our signature midnight sauce</p>
+                <div class="price">$19.99</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="testimonials" id="testimonials">
+        <h2 class="section-title">Customer Reviews</h2>
+        <div class="testimonial-grid">
+            <div class="testimonial-card">
+                <p class="testimonial-text">This place has a futuristic vibe with amazing food. The Neon Margherita literally glows!</p>
+                <div class="testimonial-author">
+                    <div class="author-avatar">JD</div>
+                    <div>
+                        <h4>John D.</h4>
+                        <p>Cyberpunk Enthusiast</p>
+                    </div>
+                </div>
+            </div>
+            <div class="testimonial-card">
+                <p class="testimonial-text">The most innovative pizza experience in town. They've redefined what a pizza can be!</p>
+                <div class="testimonial-author">
+                    <div class="author-avatar">MS</div>
+                    <div>
+                        <h4>Maria S.</h4>
+                        <p>Food Critic</p>
+                    </div>
+                </div>
+            </div>
+            <div class="testimonial-card">
+                <p class="testimonial-text">The Matrix Supreme is the best pizza I've ever had. It's like eating the future!</p>
+                <div class="testimonial-author">
+                    <div class="author-avatar">TR</div>
+                    <div>
+                        <h4>Tom R.</h4>
+                        <p>Web Developer</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="contact">
+        <div class="footer-content">
+            <div class="logo glitch" data-text="Carmelo's Brick Oven">Carmelo's Brick Oven</div>
+            <p>Bringing the taste of tradition into the digital age</p>
+            <div class="social-links">
+                <a href="#" class="social-icon"><i class="fab fa-facebook-f"></i></a>
+                <a href="#" class="social-icon"><i class="fab fa-instagram"></i></a>
+                <a href="#" class="social-icon"><i class="fab fa-twitter"></i></a>
+                <a href="#" class="social-icon"><i class="fab fa-tiktok"></i></a>
+            </div>
+            <p class="copyright">© 2023 Carmelo's Brick Oven. All rights reserved. <br> Cyberpunk Style Pizza Experience</p>
+        </div>
+    </footer>
+
+    <script>
+        // Simple cyberpunk animation effects
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add floating animation to menu cards
+            const menuCards = document.querySelectorAll('.menu-card');
+            menuCards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.2}s`;
+            });
+            
+            // Add hover effect to buttons
+            const buttons = document.querySelectorAll('.btn');
+            buttons.forEach(button => {
+                button.addEventListener('mouseenter', function() {
+                    this.style.animation = 'pulse 1s infinite';
+                });
+                
+                button.addEventListener('mouseleave', function() {
+                    this.style.animation = '';
+                });
+            });
+            
+            // Smooth scrolling for navigation links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        window.scrollTo({
+                            top: target.offsetTop - 80,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+            
+            // Add random glitch effect to header periodically
+            setInterval(() => {
+                const header = document.querySelector('header');
+                header.style.animation = 'glitch 0.1s';
+                setTimeout(() => {
+                    header.style.animation = '';
+                }, 100);
+            }, 10000);
+            
+            // Add particle background effect
+            const body = document.body;
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.style.position = 'fixed';
+                particle.style.width = `${Math.random() * 3 + 1}px`;
+                particle.style.height = particle.style.width;
+                particle.style.background = '#00ffff';
+                particle.style.borderRadius = '50%';
+                particle.style.top = `${Math.random() * 100}vh`;
+                particle.style.left = `${Math.random() * 100}vw`;
+                particle.style.boxShadow = '0 0 10px #00ffff, 0 0 20px #00ffff';
+                particle.style.zIndex = '-1';
+                particle.style.opacity = Math.random() * 0.7 + 0.3;
+                body.appendChild(particle);
+                
+                // Animate particles
+                setInterval(() => {
+                    const x = parseFloat(particle.style.left);
+                    const y = parseFloat(particle.style.top);
+                    particle.style.left = `${x + (Math.random() - 0.5) * 0.5}px`;
+                    particle.style.top = `${y + (Math.random() - 0.5) * 0.5}px`;
+                }, 1000);
+            }
+        });
+    </script>
+</body>
+</html>
+```
+
+## Key Cyberpunk Features Implemented
+
+1. **Neon Color Scheme**: Used vibrant purples, pinks, blues, and greens with glowing effects
+2. **Glitch Typography**: Implemented glitch effects on the main logo and headers
+3. **Futuristic Grid Background**: Subtle grid pattern with dark background
+4. **Floating Elements**: Menu cards with hover animations and floating effects
+5. **Neon Glowing Effects**: Buttons, text, and decorative elements with glowing effects
+6. **Digital Aesthetic**: Modern typography with Orbitron for headings
+7. **Interactive Elements**: Hover effects on buttons and menu cards
+8. **Particle Animation**: Floating neon particles in the background for added cyberpunk atmosphere
+9. **Responsive Design**: Adapts to different screen sizes
+10. **Smooth Animations**: Subtle animations throughout the page
+
+The design combines the classic Carmelo's branding with a futuristic cyberpunk theme while maintaining all the essential information about your pizza business.

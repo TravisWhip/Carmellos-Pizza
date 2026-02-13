@@ -1,0 +1,629 @@
+# Terminal-Style Pizza Website
+
+I'll create a modern terminal-style pizza website with embedded JavaScript in a single HTML file. This will feature a dark terminal interface with glitch effects, terminal commands, and pizza menu visualization.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carmelo's Brick Oven Pizzas - Terminal Style</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+        
+        body {
+            background-color: #0a0a0a;
+            color: #00ff00;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #terminal-container {
+            flex: 1;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .terminal-header {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #00ff00;
+            margin-bottom: 20px;
+        }
+        
+        .terminal-title {
+            font-weight: bold;
+            text-shadow: 0 0 5px #00ff00;
+        }
+        
+        .terminal-status {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #00ff00;
+            box-shadow: 0 0 5px #00ff00;
+        }
+        
+        .terminal-body {
+            height: calc(100% - 70px);
+            overflow-y: auto;
+            padding: 10px;
+            background-color: rgba(0, 20, 0, 0.3);
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            position: relative;
+            white-space: pre-wrap;
+        }
+        
+        .command-line {
+            margin: 10px 0;
+            display: flex;
+        }
+        
+        .prompt {
+            color: #00ff00;
+            margin-right: 10px;
+        }
+        
+        .command-text {
+            color: #00ff00;
+        }
+        
+        .output {
+            color: #00ff00;
+            margin: 5px 0;
+        }
+        
+        .command-response {
+            color: #00ff00;
+            margin-left: 20px;
+        }
+        
+        .terminal-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background-color: #00ff00;
+            animation: blink 1s infinite;
+            vertical-align: middle;
+            margin-left: 2px;
+        }
+        
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        
+        .pizza-menu {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .pizza-card {
+            background-color: rgba(0, 20, 0, 0.5);
+            border: 1px solid #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            transition: transform 0.3s;
+        }
+        
+        .pizza-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 10px #00ff00;
+        }
+        
+        .pizza-name {
+            font-weight: bold;
+            color: #00ff00;
+            margin-bottom: 10px;
+        }
+        
+        .pizza-description {
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .pizza-price {
+            color: #00ff00;
+            font-weight: bold;
+        }
+        
+        .glitch-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(0, 0, 0, 0.1) 50%, transparent 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            animation: glitch 10s infinite;
+            z-index: 10;
+        }
+        
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+        
+        .scanline {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 10px;
+            background: rgba(0, 255, 0, 0.1);
+            animation: scan 10s linear infinite;
+            z-index: 5;
+        }
+        
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+        
+        .terminal-footer {
+            padding: 10px;
+            border-top: 1px solid #00ff00;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+        }
+        
+        .terminal-logo {
+            color: #00ff00;
+            font-weight: bold;
+            text-shadow: 0 0 5px #00ff00;
+        }
+        
+        .typing-effect {
+            animation: typing 3.5s steps(40, end), blink-caret 0.75s step-end infinite;
+            white-space: nowrap;
+            overflow: hidden;
+            border-right: 2px solid #00ff00;
+            width: 0;
+        }
+        
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
+        
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: #00ff00; }
+        }
+        
+        .command-input {
+            background: transparent;
+            border: none;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            width: 100%;
+            outline: none;
+        }
+        
+        .command-input:focus {
+            outline: none;
+        }
+        
+        .pizza-display {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .pizza-icon {
+            font-size: 40px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        
+        .glitch-text {
+            position: relative;
+        }
+        
+        .glitch-text::before, 
+        .glitch-text::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .glitch-text::before {
+            left: 2px;
+            text-shadow: -2px 0 #ff00c1;
+            clip: rect(44px, 450px, 56px, 0);
+            animation: glitch-anim 5s infinite linear alternate-reverse;
+        }
+        
+        .glitch-text::after {
+            left: -2px;
+            text-shadow: -2px 2px #00fff9;
+            clip: rect(44px, 450px, 56px, 0);
+            animation: glitch-anim2 5s infinite linear alternate-reverse;
+        }
+        
+        @keyframes glitch-anim {
+            0% { clip: rect(42px, 9999px, 44px, 0); }
+            5% { clip: rect(12px, 9999px, 59px, 0); }
+            10% { clip: rect(48px, 9999px, 29px, 0); }
+            15% { clip: rect(42px, 9999px, 73px, 0); }
+            20% { clip: rect(63px, 9999px, 27px, 0); }
+            25% { clip: rect(34px, 9999px, 55px, 0); }
+            30% { clip: rect(86px, 9999px, 73px, 0); }
+            35% { clip: rect(20px, 9999px, 20px, 0); }
+            40% { clip: rect(16px, 9999px, 60px, 0); }
+            45% { clip: rect(78px, 9999px, 32px, 0); }
+            50% { clip: rect(10px, 9999px, 22px, 0); }
+            55% { clip: rect(10px, 9999px, 24px, 0); }
+            60% { clip: rect(18px, 9999px, 59px, 0); }
+            65% { clip: rect(79px, 9999px, 26px, 0); }
+            70% { clip: rect(47px, 9999px, 56px, 0); }
+            75% { clip: rect(14px, 9999px, 24px, 0); }
+            80% { clip: rect(99px, 9999px, 57px, 0); }
+            85% { clip: rect(43px, 9999px, 67px, 0); }
+            90% { clip: rect(47px, 9999px, 26px, 0); }
+            95% { clip: rect(72px, 9999px, 66px, 0); }
+            100% { clip: rect(82px, 9999px, 54px, 0); }
+        }
+        
+        @keyframes glitch-anim2 {
+            0% { clip: rect(65px, 9999px, 100px, 0); }
+            5% { clip: rect(20px, 9999px, 60px, 0); }
+            10% { clip: rect(88px, 9999px, 27px, 0); }
+            15% { clip: rect(44px, 9999px, 30px, 0); }
+            20% { clip: rect(69px, 9999px, 97px, 0); }
+            25% { clip: rect(58px, 9999px, 39px, 0); }
+            30% { clip: rect(21px, 9999px, 90px, 0); }
+            35% { clip: rect(24px, 9999px, 45px, 0); }
+            40% { clip: rect(13px, 9999px, 28px, 0); }
+            45% { clip: rect(39px, 9999px, 98px, 0); }
+            50% { clip: rect(33px, 9999px, 68px, 0); }
+            55% { clip: rect(92px, 9999px, 41px, 0); }
+            60% { clip: rect(11px, 9999px, 73px, 0); }
+            65% { clip: rect(34px, 9999px, 11px, 0); }
+            70% { clip: rect(20px, 9999px, 84px, 0); }
+            75% { clip: rect(23px, 9999px, 56px, 0); }
+            80% { clip: rect(82px, 9999px, 42px, 0); }
+            85% { clip: rect(38px, 9999px, 83px, 0); }
+            90% { clip: rect(60px, 9999px, 24px, 0); }
+            95% { clip: rect(37px, 9999px, 26px, 0); }
+            100% { clip: rect(100px, 9999px, 60px, 0); }
+        }
+    </style>
+</head>
+<body>
+    <div id="terminal-container">
+        <div class="terminal-header">
+            <div class="terminal-title glitch-text" data-text="CARMELLO'S BRICK OVEN PIZZAS">CARMELLO'S BRICK OVEN PIZZAS</div>
+            <div class="terminal-status">
+                <div class="status-item">
+                    <div class="status-dot"></div>
+                    <span>ONLINE</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-dot"></div>
+                    <span>DELIVERY</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-dot"></div>
+                    <span>OPEN</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="terminal-body" id="terminal-body">
+            <div class="command-line">
+                <span class="prompt">user@pizza-terminal:~$</span>
+                <span class="command-text">echo "Welcome to Carmelo's Brick Oven Pizzas"</span>
+            </div>
+            <div class="command-response">
+                =========================== 
+                WELCOME TO CARMELLO'S BRICK OVEN PIZZAS
+                =========================== 
+                
+                Your terminal-style pizzeria experience begins here.
+                
+                Type 'menu' to see our current pizza offerings
+                Type 'order' to begin your order
+                Type 'help' for available commands
+            </div>
+            
+            <div class="command-line">
+                <span class="prompt">user@pizza-terminal:~$</span>
+                <span class="command-text">echo "Carmelo's special" | toilet -f term</span>
+            </div>
+            <div class="command-response">
+                <div class="pizza-display">
+                    <div class="pizza-icon">🍕</div>
+                    <div class="pizza-icon">🍔</div>
+                    <div class="pizza-icon">🍜</div>
+                    <div class="pizza-icon">🌮</div>
+                    <div class="pizza-icon">🥗</div>
+                </div>
+                <div>Currently serving: 78 pizzas today</div>
+                <div>Rating: 4.9/5 stars</div>
+                <div>Delivery in 30 minutes</div>
+            </div>
+        </div>
+        
+        <div class="terminal-footer">
+            <div class="terminal-logo">CARMELLO'S BRICK OVEN PIZZAS</div>
+            <div>Terminal v1.2.4 | Last updated: 05:45 AM</div>
+        </div>
+    </div>
+    
+    <div class="glitch-effect"></div>
+    <div class="scanline"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const terminalBody = document.getElementById('terminal-body');
+            const prompt = document.querySelector('.prompt');
+            const commandInput = document.querySelector('.command-input');
+            
+            // Initial commands for the terminal
+            const commands = [
+                'echo "Pizza menu loaded..."',
+                'display menu',
+                'cat menu.txt',
+                'ls -l',
+                'find pizza -name "*special*"',
+                'ps aux | grep pizza',
+                'ping localhost',
+                'whoami'
+            ];
+            
+            // Pizza menu data
+            const pizzaMenu = [
+                {
+                    name: "Margherita",
+                    description: "Fresh tomatoes, mozzarella, basil",
+                    price: "$16.99"
+                },
+                {
+                    name: "Pepperoni",
+                    description: "Classic pepperoni with melted mozzarella",
+                    price: "$19.99"
+                },
+                {
+                    name: "Hawaiian",
+                    description: "Ham, pineapple, mozzarella",
+                    price: "$18.99"
+                },
+                {
+                    name: "Vegetarian",
+                    description: "Mushrooms, bell peppers, olives, onions",
+                    price: "$17.99"
+                },
+                {
+                    name: "BBQ Chicken",
+                    description: "Grilled chicken, red onions, BBQ sauce",
+                    price: "$20.99"
+                },
+                {
+                    name: "Meat Lover's",
+                    description: "Pepperoni, sausage, ham, bacon",
+                    price: "$22.99"
+                },
+                {
+                    name: "Four Cheese",
+                    description: "Mozzarella, parmesan, provolone, gouda",
+                    price: "$21.99"
+                },
+                {
+                    name: "Truffle Mushroom",
+                    description: "Wild mushrooms, truffle oil, ricotta",
+                    price: "$23.99"
+                }
+            ];
+            
+            // Create pizza menu display
+            function createPizzaMenu() {
+                const menuContainer = document.createElement('div');
+                menuContainer.className = 'pizza-menu';
+                
+                pizzaMenu.forEach(pizza => {
+                    const pizzaCard = document.createElement('div');
+                    pizzaCard.className = 'pizza-card';
+                    pizzaCard.innerHTML = `
+                        <div class="pizza-name">${pizza.name}</div>
+                        <div class="pizza-description">${pizza.description}</div>
+                        <div class="pizza-price">${pizza.price}</div>
+                    `;
+                    menuContainer.appendChild(pizzaCard);
+                });
+                
+                return menuContainer;
+            }
+            
+            // Add command to terminal
+            function addCommand(command) {
+                const commandLine = document.createElement('div');
+                commandLine.className = 'command-line';
+                commandLine.innerHTML = `
+                    <span class="prompt">user@pizza-terminal:~$</span>
+                    <span class="command-text">${command}</span>
+                `;
+                terminalBody.appendChild(commandLine);
+                
+                // Simulate response
+                setTimeout(() => {
+                    const responseLine = document.createElement('div');
+                    responseLine.className = 'command-response';
+                    
+                    switch(command) {
+                        case 'menu':
+                            responseLine.innerHTML = 'Displaying current menu:\n' + createPizzaMenu().outerHTML;
+                            break;
+                        case 'order':
+                            responseLine.innerHTML = 'Starting order process...\nPlease enter your details:\n' +
+                                'Name: [input]\n' +
+                                'Address: [input]\n' +
+                                'Phone: [input]\n' +
+                                'Notes: [input]';
+                            break;
+                        case 'help':
+                            responseLine.innerHTML = 'Available commands:\n' +
+                                'menu         - Display pizza menu\n' +
+                                'order        - Begin ordering process\n' +
+                                'help         - Show this help message\n' +
+                                'clear        - Clear terminal screen\n' +
+                                'about        - Show about information\n' +
+                                'contact      - Contact information';
+                            break;
+                        case 'clear':
+                            terminalBody.innerHTML = '';
+                            return;
+                        case 'about':
+                            responseLine.innerHTML = 'Carmelo\'s Brick Oven Pizzas\n' +
+                                'Founded in 1985 by Carmelo DiGiovanni\n' +
+                                'Specializing in authentic brick oven pizzas\n' +
+                                '24/7 delivery service\n' +
+                                'All pizzas baked to perfection';
+                            break;
+                        case 'contact':
+                            responseLine.innerHTML = 'Contact Information:\n' +
+                                '📞 (555) 123-4567\n' +
+                                '📧 info@carmelosbrickovenpizzas.com\n' +
+                                '📍 123 Pizzeria Lane, Pizza City\n' +
+                                '🌐 www.carmelosbrickovenpizzas.com';
+                            break;
+                        default:
+                            responseLine.innerHTML = `Command not found: ${command}\nType 'help' for available commands`;
+                    }
+                    
+                    terminalBody.appendChild(responseLine);
+                    terminalBody.scrollTop = terminalBody.scrollHeight;
+                }, 500);
+            }
+            
+            // Simulate typing animation
+            function typeText(element, text, speed = 50) {
+                let i = 0;
+                element.innerHTML = '';
+                const typing = setInterval(() => {
+                    if (i < text.length) {
+                        element.innerHTML += text.charAt(i);
+                        i++;
+                        terminalBody.scrollTop = terminalBody.scrollHeight;
+                    } else {
+                        clearInterval(typing);
+                    }
+                }, speed);
+            }
+            
+            // Simulate initial commands
+            setTimeout(() => {
+                commands.forEach((cmd, index) => {
+                    setTimeout(() => {
+                        addCommand(cmd);
+                    }, index * 800);
+                });
+            }, 1000);
+            
+            // Handle user input
+            let userInput = '';
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    if (userInput.trim() !== '') {
+                        addCommand(userInput);
+                        userInput = '';
+                    }
+                } else if (e.key === 'Backspace') {
+                    userInput = userInput.slice(0, -1);
+                } else if (e.key.length === 1) {
+                    userInput += e.key;
+                }
+            });
+            
+            // Add cursor effect
+            const cursor = document.createElement('span');
+            cursor.className = 'terminal-cursor';
+            document.querySelector('.command-line').appendChild(cursor);
+            
+            // Add continuous terminal activity
+            setInterval(() => {
+                const activity = ['[INFO] Processing order', '[SUCCESS] Pizza baked', '[NOTICE] Delivery in progress', '[DEBUG] Temperature stable'];
+                const randomActivity = activity[Math.floor(Math.random() * activity.length)];
+                const activityLine = document.createElement('div');
+                activityLine.className = 'command-response';
+                activityLine.textContent = randomActivity;
+                terminalBody.appendChild(activityLine);
+                terminalBody.scrollTop = terminalBody.scrollHeight;
+            }, 10000);
+        });
+    </script>
+</body>
+</html>
+```
+
+## Features of this Terminal-Style Pizza Website:
+
+1. **Authentic Terminal Interface**:
+   - Green-on-black color scheme with classic terminal styling
+   - Blinking cursor effect and typing animations
+   - Command-line interface with prompts
+
+2. **Interactive Elements**:
+   - Type commands like "menu", "order", "help", "clear"
+   - Dynamic pizza menu display
+   - Terminal animations and glitch effects
+
+3. **Pizza Menu Display**:
+   - Responsive grid layout for pizza cards
+   - Interactive hover effects
+   - Glitch text effects on the main heading
+
+4. **Visual Effects**:
+   - Scanline animation across the screen
+   - Glitch effects on text and interface elements
+   - Pulsing pizza icons for visual interest
+   - Random terminal activity messages
+
+5. **Responsive Design**:
+   - Works on different screen sizes
+   - Scrollable terminal output
+   - Grid-based pizza menu layout
+
+The website is contained in a single HTML file with embedded CSS and JavaScript, ready to run in any modern browser.

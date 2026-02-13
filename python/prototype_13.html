@@ -1,0 +1,400 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carmelo's Brick Oven Pizzas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            line-height: 1.6;
+            color: #000;
+            background: #fff;
+            font-size: 18px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header Styles */
+        header {
+            padding: 30px 0;
+            border-bottom: 1px solid #000;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: -1px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: #000;
+            font-weight: 500;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            padding: 5px 0;
+        }
+
+        nav a:hover {
+            border-bottom: 1px solid #000;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 60px 0;
+            margin-bottom: 50px;
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            font-weight: 900;
+            letter-spacing: -3px;
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 1.5rem;
+            max-width: 700px;
+            margin: 0 auto 40px;
+            font-weight: 300;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            background: #000;
+            color: #fff;
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 1rem;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            border: 1px solid #000;
+        }
+
+        .btn:hover {
+            background: #fff;
+            color: #000;
+        }
+
+        /* Menu Section */
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 60px 0 40px;
+            letter-spacing: -1px;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 60px;
+        }
+
+        .menu-item {
+            padding: 20px;
+            border: 1px solid #000;
+            transition: all 0.3s ease;
+        }
+
+        .menu-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .menu-item h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .menu-item p {
+            margin-bottom: 15px;
+            font-weight: 300;
+        }
+
+        .price {
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        /* About Section */
+        .about {
+            padding: 60px 0;
+            text-align: center;
+            margin: 60px 0;
+            border-top: 1px solid #000;
+            border-bottom: 1px solid #000;
+        }
+
+        .about h2 {
+            font-size: 2rem;
+            margin-bottom: 30px;
+            font-weight: 700;
+        }
+
+        .about-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .about-content p {
+            margin-bottom: 20px;
+            font-weight: 300;
+        }
+
+        /* Contact Section */
+        .contact {
+            padding: 60px 0;
+            text-align: center;
+        }
+
+        .contact-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+
+        .contact-item h3 {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .contact-item p {
+            font-weight: 300;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            border-top: 1px solid #000;
+            margin-top: 40px;
+        }
+
+        .social-links {
+            margin: 20px 0;
+        }
+
+        .social-links a {
+            display: inline-block;
+            margin: 0 10px;
+            color: #000;
+            text-decoration: none;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .copyright {
+            font-weight: 300;
+            margin-top: 20px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .hero p {
+                font-size: 1.2rem;
+            }
+            
+            nav ul {
+                gap: 15px;
+                font-size: 0.9rem;
+            }
+            
+            .section-title {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="logo">Carmelo's</div>
+            <nav>
+                <ul>
+                    <li><a href="#menu">Menu</a></li>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#location">Location</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <!-- Hero Section -->
+        <section class="hero">
+            <h1>Authentic Italian<br>Pizza &amp; Pasta</h1>
+            <p>Handcrafted in our traditional brick oven, using time-honored recipes passed down through generations</p>
+            <a href="#menu" class="btn">View Our Menu</a>
+        </section>
+
+        <!-- Menu Section -->
+        <section id="menu">
+            <h2 class="section-title">Our Menu</h2>
+            <div class="menu-grid">
+                <div class="menu-item">
+                    <h3>Classic Margherita</h3>
+                    <p>Fresh mozzarella, tomatoes, basil, and olive oil</p>
+                    <div class="price">$18.50</div>
+                </div>
+                <div class="menu-item">
+                    <h3>Pepperoni</h3>
+                    <p>Pepperoni, mozzarella, and tomato sauce</p>
+                    <div class="price">$20.00</div>
+                </div>
+                <div class="menu-item">
+                    <h3>Four Cheese</h3>
+                    <p>Mozzarella, provolone, gorgonzola, and parmesan</p>
+                    <div class="price">$22.00</div>
+                </div>
+                <div class="menu-item">
+                    <h3>Vegetarian</h3>
+                    <p>Eggplant, zucchini, mushrooms, bell peppers</p>
+                    <div class="price">$21.50</div>
+                </div>
+                <div class="menu-item">
+                    <h3>Seafood</h3>
+                    <p>Shrimp, scallops, and white wine sauce</p>
+                    <div class="price">$25.00</div>
+                </div>
+                <div class="menu-item">
+                    <h3>Truffle Mushroom</h3>
+                    <p>Wild mushrooms, truffle oil, parmesan</p>
+                    <div class="price">$24.00</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="about">
+            <h2>Our Story</h2>
+            <div class="about-content">
+                <p>For over thirty years, Carmelo's Brick Oven Pizzas has brought authentic Italian flavors to our community. Our master pizzaiolo, Carmelo himself, brings a centuries-old tradition of pizza-making to every creation.</p>
+                <p>Every pizza is handcrafted in our traditional brick oven, which maintains the perfect temperature for crispy yet chewy crusts. Our dough is prepared fresh daily using techniques passed down through generations.</p>
+                <p>We use only the finest ingredients – from imported San Marzano tomatoes to aged Parmigiano-Reggiano – ensuring each bite delivers an authentic taste of Italy.</p>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="contact">
+            <h2 class="section-title">Visit Us</h2>
+            <div class="contact-info">
+                <div class="contact-item">
+                    <h3>Location</h3>
+                    <p>123 Piazza Avenue<br>Westport, CA 98201</p>
+                </div>
+                <div class="contact-item">
+                    <h3>Hours</h3>
+                    <p>Monday - Thursday: 11am - 10pm<br>Friday - Saturday: 11am - 11pm<br>Sunday: 12pm - 9pm</p>
+                </div>
+                <div class="contact-item">
+                    <h3>Contact</h3>
+                    <p>Phone: (555) 123-4567<br>Email: info@carmelos.com</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <div class="social-links">
+                <a href="#">Instagram</a>
+                <a href="#">Facebook</a>
+                <a href="#">Twitter</a>
+            </div>
+            <div class="copyright">
+                &copy; 2023 Carmelo's Brick Oven Pizzas. All rights reserved.
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Header scroll effect
+        window.addEventListener('scroll', function() {
+            const header = document.querySelector('header');
+            if (window.scrollY > 50) {
+                header.style.padding = '15px 0';
+                header.style.borderBottom = '1px solid #ccc';
+            } else {
+                header.style.padding = '30px 0';
+                header.style.borderBottom = '1px solid #000';
+            }
+        });
+
+        // Menu item hover effect
+        const menuItems = document.querySelectorAll('.menu-item');
+        menuItems.forEach(item => {
+            item.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-5px)';
+            });
+            item.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+
+        // Simple animation on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const elements = document.querySelectorAll('.menu-item, .section-title');
+            elements.forEach((el, index) => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    el.style.transition = 'all 0.5s ease';
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                }, 100 * index);
+            });
+        });
+    </script>
+</body>
+</html>
+```
