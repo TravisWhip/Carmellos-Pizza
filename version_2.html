@@ -715,14 +715,32 @@
         const ctx = canvas.getContext('2d');
         const hero = canvas.parentElement;
         let embers = [];
-        const EMBER_COUNT = 500;
         const FAST_EMBERS = true;
-        const emberYScalar = !FAST_EMBERS ? 1 : 2;
-        const emberXScalar = !FAST_EMBERS ? 1 : 10;
+        // Density: embers per 100,000 px² of screen area (~1 per 200px²)
+        const EMBER_DENSITY = 200 / (1920 * 1080);
+        // Reference height for speed scaling (1080p)
+        const REF_HEIGHT = 1080;
+
+        let emberCount, speedScale, driftScale;
+
+        function calcScreenParams() {
+            emberCount = Math.round(canvas.width * canvas.height * EMBER_DENSITY);
+            emberCount = Math.min(emberCount, 200);
+            speedScale = (canvas.height / REF_HEIGHT) * (FAST_EMBERS ? 2 : 1);
+            driftScale = (canvas.width / 1920) * (FAST_EMBERS ? 10 : 1);
+        }
 
         function resize() {
             canvas.width = hero.offsetWidth;
             canvas.height = hero.offsetHeight;
+            calcScreenParams();
+            // Adjust ember count on resize
+            while (embers.length < emberCount) {
+                const e = createEmber();
+                preSimEmber(e);
+                embers.push(e);
+            }
+            if (embers.length > emberCount) embers.length = emberCount;
         }
         resize();
         window.addEventListener('resize', resize);
@@ -763,9 +781,9 @@
                 w: isSpark ? Math.random() * 1.5 + 0.5 : Math.random() * 2.5 + 1.5,
                 h: isSpark ? Math.random() * 1 + 0.3 : Math.random() * 1.5 + 0.8,
                 // Movement
-                speedY: (isSpark ? Math.random() * 0.8 + 0.3 : Math.random() * 0.7 + 0.4) * emberYScalar,
+                speedY: (isSpark ? Math.random() * 0.8 + 0.3 : Math.random() * 0.7 + 0.4) * speedScale,
                 speedX: 0,
-                baseSpeedX: (Math.random() - 0.5) * 0.25 * emberXScalar,
+                baseSpeedX: (Math.random() - 0.5) * 0.25 * driftScale,
                 // Turbulence
                 turbSeed: Math.random() * 1000,
                 turbScale: Math.random() * 0.002 + 0.001,
@@ -800,9 +818,7 @@
             };
         }
 
-        for (let i = 0; i < EMBER_COUNT; i++) {
-            const e = createEmber();
-            // Pre-simulate a random number of frames so embers are spread out on load
+        function preSimEmber(e) {
             const simFrames = Math.random() * e.maxLife * 0.85 | 0;
             for (let f = 0; f < simFrames; f++) {
                 e.life++;
@@ -818,6 +834,11 @@
                 e.x += e.baseSpeedX + (nx - 0.5) * e.turbStrength + sw;
                 e.angle += e.rotSpeed;
             }
+        }
+
+        for (let i = 0; i < emberCount; i++) {
+            const e = createEmber();
+            preSimEmber(e);
             embers.push(e);
         }
 
