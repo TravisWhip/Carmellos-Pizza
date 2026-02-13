@@ -741,11 +741,15 @@
                 // Movement
                 speedY: isSpark ? Math.random() * 0.8 + 0.3 : Math.random() * 0.7 + 0.4,
                 speedX: 0,
-                baseSpeedX: (Math.random() - 0.5) * 0.15,
+                baseSpeedX: (Math.random() - 0.5) * 0.25,
                 // Turbulence
                 turbSeed: Math.random() * 1000,
                 turbScale: Math.random() * 0.002 + 0.001,
-                turbStrength: Math.random() * 0.6 + 0.2,
+                turbStrength: Math.random() * 0.8 + 0.3,
+                // Randomized swirl (layered waves at different frequencies)
+                swirl1: { phase: Math.random() * Math.PI * 2, speed: Math.random() * 0.018 + 0.005, amp: Math.random() * 0.4 + 0.15 },
+                swirl2: { phase: Math.random() * Math.PI * 2, speed: Math.random() * 0.04 + 0.02, amp: Math.random() * 0.25 + 0.1 },
+                swirl3: { phase: Math.random() * Math.PI * 2, speed: Math.random() * 0.08 + 0.04, amp: Math.random() * 0.15 + 0.05 },
                 // Rotation
                 angle: Math.random() * Math.PI * 2,
                 rotSpeed: (Math.random() - 0.5) * 0.015,
@@ -774,8 +778,22 @@
 
         for (let i = 0; i < EMBER_COUNT; i++) {
             const e = createEmber();
-            // Stagger initial life so they don't all spawn at once, but keep y at bottom
-            e.life = Math.random() * -200 | 0;
+            // Pre-simulate a random number of frames so embers are spread out on load
+            const simFrames = Math.random() * e.maxLife * 0.85 | 0;
+            for (let f = 0; f < simFrames; f++) {
+                e.life++;
+                e.swirl1.phase += e.swirl1.speed;
+                e.swirl2.phase += e.swirl2.speed;
+                e.swirl3.phase += e.swirl3.speed;
+                const nx = noise(e.turbSeed + f * e.turbScale, e.y * 0.01);
+                const sw = Math.sin(e.swirl1.phase) * e.swirl1.amp
+                         + Math.sin(e.swirl2.phase) * e.swirl2.amp
+                         + Math.sin(e.swirl3.phase) * e.swirl3.amp;
+                const accel = 1 + (1 - e.y / canvas.height) * 0.15;
+                e.y -= e.speedY * accel;
+                e.x += e.baseSpeedX + (nx - 0.5) * e.turbStrength + sw;
+                e.angle += e.rotSpeed;
+            }
             embers.push(e);
         }
 
@@ -794,10 +812,15 @@
                 const e = embers[i];
                 e.life++;
 
-                // Turbulent movement using noise
+                // Turbulent movement using noise + swirl
                 const nx = noise(e.turbSeed + time * e.turbScale, e.y * 0.01);
-                const ny = noise(e.y * 0.01, e.turbSeed + time * e.turbScale);
-                e.speedX = e.baseSpeedX + (nx - 0.5) * e.turbStrength;
+                e.swirl1.phase += e.swirl1.speed;
+                e.swirl2.phase += e.swirl2.speed;
+                e.swirl3.phase += e.swirl3.speed;
+                const swirl = Math.sin(e.swirl1.phase) * e.swirl1.amp
+                            + Math.sin(e.swirl2.phase) * e.swirl2.amp
+                            + Math.sin(e.swirl3.phase) * e.swirl3.amp;
+                e.speedX = e.baseSpeedX + (nx - 0.5) * e.turbStrength + swirl;
 
                 // Slight upward acceleration (hot air rises faster)
                 const accel = 1 + (1 - e.y / canvas.height) * 0.15;
