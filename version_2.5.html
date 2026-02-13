@@ -726,6 +726,18 @@
         const REF_HEIGHT = 1080;
         const MAX_EMBERS = 10000;
 
+        // ── Adaptive performance ──
+        const TARGET_FPS = 55;       // scale up if above this
+        const MIN_FPS = 40;          // scale down if below this
+        const SAMPLE_WINDOW = 60;    // frames to average over
+        const RAMP_UP_RATE = 0.05;   // add 5% of target per cycle
+        const RAMP_DOWN_RATE = 0.15; // remove 15% per cycle (react faster to drops)
+        const MIN_EMBERS = 50;       // never go below this
+        let adaptiveTarget = 0;      // 0 means use full density (set after first resize)
+        let frameTimes = [];
+        let lastFrameTime = 0;
+
+
         let emberCount, speedScale, driftScale;
 
         function calcScreenParams() {
@@ -907,12 +919,24 @@
             canvas.height = hero.offsetHeight;
             gl.viewport(0, 0, canvas.width, canvas.height);
             calcScreenParams();
-            while (embers.length < emberCount) {
+            // On first resize, start at 40% of full density for a quick ramp-up test
+            if (adaptiveTarget === 0) {
+                adaptiveTarget = Math.max(MIN_EMBERS, Math.round(emberCount * 0.4));
+            } else {
+                // On window resize, clamp adaptive target to new full density
+                adaptiveTarget = Math.max(MIN_EMBERS, Math.min(emberCount, adaptiveTarget));
+            }
+            applyEmberCount(adaptiveTarget);
+        }
+
+        function applyEmberCount(target) {
+            target = Math.max(MIN_EMBERS, Math.min(MAX_EMBERS, target));
+            while (embers.length < target) {
                 const e = createEmber();
                 preSimEmber(e);
                 embers.push(e);
             }
-            if (embers.length > emberCount) embers.length = emberCount;
+            if (embers.length > target) embers.length = target;
         }
         // Defer first resize until layout is complete so canvas gets real dimensions
         requestAnimationFrame(() => resize());
@@ -934,6 +958,18 @@
             clearTimeout(mouseStopTimer);
             mouseStopTimer = setTimeout(() => { mouseMoving = false; }, 50);
         });
+        // ── Click explosion ──
+        let clickX = -9999, clickY = -9999;
+        let clickActive = false;
+        const CLICK_RADIUS = 300;
+        const CLICK_FORCE = 8;
+        hero.addEventListener('click', (ev) => {
+            const rect = canvas.getBoundingClientRect();
+            clickX = ev.clientX - rect.left;
+            clickY = ev.clientY - rect.top;
+            clickActive = true;
+        });
+
         hero.addEventListener('mouseleave', () => {
             mouseX = -9999; mouseY = -9999;
             framePrevMX = -9999; framePrevMY = -9999;
@@ -1074,6 +1110,19 @@
                         e.vy += (mdy * 0.75 + pdy * 0.25) * force;
                     }
                 }
+                // Click explosion — radial burst away from click point
+                if (clickActive) {
+                    const cdx = e.x - clickX;
+                    const cdy = e.y - clickY;
+                    const cDist = Math.sqrt(cdx * cdx + cdy * cdy);
+                    if (cDist < CLICK_RADIUS && cDist > 0) {
+                        const t = cDist / CLICK_RADIUS;
+                        const falloff = (1 - t) * (1 - t);
+                        const cForce = falloff * CLICK_FORCE;
+                        e.vx += (cdx / cDist) * cForce;
+                        e.vy += (cdy / cDist) * cForce;
+                    }
+                }
                 e.vx *= 0.97;
                 e.vy *= 0.97;
 
@@ -1165,6 +1214,34 @@
             // Store mouse position for next frame's segment
             framePrevMX = mouseX;
             framePrevMY = mouseY;
+            clickActive = false;
+
+            // ── Adaptive performance scaling ──
+            const now = performance.now();
+            if (lastFrameTime > 0) {
+                frameTimes.push(now - lastFrameTime);
+                if (frameTimes.length > SAMPLE_WINDOW) frameTimes.shift();
+
+                if (frameTimes.length === SAMPLE_WINDOW) {
+                    const avgMs = frameTimes.reduce((a, b) => a + b, 0) / SAMPLE_WINDOW;
+                    const avgFps = 1000 / avgMs;
+
+                    if (avgFps > TARGET_FPS && adaptiveTarget < emberCount) {
+                        // Headroom — add more embers
+                        const add = Math.max(10, Math.round(emberCount * RAMP_UP_RATE));
+                        adaptiveTarget = Math.min(emberCount, adaptiveTarget + add);
+                        applyEmberCount(adaptiveTarget);
+                        frameTimes.length = 0; // reset to re-measure with new count
+                    } else if (avgFps < MIN_FPS && adaptiveTarget > MIN_EMBERS) {
+                        // Struggling — reduce embers
+                        const remove = Math.max(10, Math.round(adaptiveTarget * RAMP_DOWN_RATE));
+                        adaptiveTarget = Math.max(MIN_EMBERS, adaptiveTarget - remove);
+                        applyEmberCount(adaptiveTarget);
+                        frameTimes.length = 0;
+                    }
+                }
+            }
+            lastFrameTime = now;
 
             requestAnimationFrame(animate);
         }
