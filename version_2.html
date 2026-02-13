@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carmelo's Brick Oven Pizza | We Bring the Pizzeria to You</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --flame: #E8520E;
+            --ember: #FF6B2B;
+            --charcoal: #1A1A1A;
+            --smoke: #2D2D2D;
+            --cream: #FFF8F0;
+            --warm-white: #FFFDFB;
+            --gold: #D4A04A;
+            --sage: #6B7F5E;
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--charcoal);
+            color: var(--cream);
+            overflow-x: hidden;
+        }
+
+        /* ── NAV ── */
+        nav {
+            position: fixed; top:0; left:0; right:0; z-index:1000;
+            padding: 1rem 2rem;
+            display: flex; align-items: center; justify-content: space-between;
+            transition: background .4s, backdrop-filter .4s, padding .4s;
+        }
+        nav.scrolled {
+            background: rgba(26,26,26,.92);
+            backdrop-filter: blur(20px);
+            padding: .7rem 2rem;
+            box-shadow: 0 2px 40px rgba(0,0,0,.4);
+        }
+        .nav-logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem; font-weight: 900; color: var(--cream);
+            text-decoration: none; letter-spacing: -0.5px;
+        }
+        .nav-logo span { color: var(--ember); }
+        .nav-links { display:flex; gap:2rem; align-items:center; }
+        .nav-links a {
+            color: var(--cream); text-decoration:none; font-size:.85rem;
+            font-weight:500; letter-spacing:.5px; text-transform:uppercase;
+            opacity:.8; transition: opacity .3s;
+        }
+        .nav-links a:hover { opacity:1; }
+        .nav-cta {
+            background: var(--flame) !important; color:#fff !important;
+            padding: .6rem 1.4rem !important; border-radius: 50px !important;
+            opacity:1 !important; font-weight:600 !important;
+            transition: transform .3s, box-shadow .3s !important;
+        }
+        .nav-cta:hover { transform:scale(1.05); box-shadow: 0 4px 25px rgba(232,82,14,.5); }
+        .hamburger { display:none; flex-direction:column; gap:5px; cursor:pointer; background:none; border:none; padding:8px; }
+        .hamburger span { display:block; width:24px; height:2px; background:var(--cream); border-radius:2px; transition: .3s; }
+
+        /* ── HERO ── */
+        .hero {
+            min-height: 100vh; display:flex; align-items:center; justify-content:center;
+            position:relative; overflow:hidden;
+            background: radial-gradient(ellipse at 30% 80%, rgba(232,82,14,.15), transparent 60%),
+            radial-gradient(ellipse at 70% 20%, rgba(212,160,74,.08), transparent 50%),
+            var(--charcoal);
+        }
+        .hero-bg-pattern {
+            position:absolute; inset:0; opacity:.03;
+            background-image: radial-gradient(circle at 1px 1px, var(--cream) 1px, transparent 0);
+            background-size: 40px 40px;
+        }
+        .fire-glow {
+            position:absolute; bottom:-20%; left:50%; transform:translateX(-50%);
+            width:120%; height:60%; border-radius:50%;
+            background: radial-gradient(ellipse, rgba(232,82,14,.12), transparent 70%);
+            animation: breathe 4s ease-in-out infinite;
+        }
+        @keyframes breathe { 0%,100%{opacity:.6;transform:translateX(-50%) scale(1)} 50%{opacity:1;transform:translateX(-50%) scale(1.05)} }
+
+        .hero-content {
+            text-align:center; padding:2rem; position:relative; z-index:2;
+            max-width:900px;
+        }
+        .hero-badge {
+            display:inline-flex; align-items:center; gap:.5rem;
+            background: rgba(232,82,14,.15); border:1px solid rgba(232,82,14,.3);
+            padding: .5rem 1.2rem; border-radius:50px; margin-bottom:2rem;
+            font-size:.8rem; font-weight:600; letter-spacing:1px; text-transform:uppercase;
+            color:var(--ember);
+        }
+        .hero-badge .dot { width:6px; height:6px; border-radius:50%; background:var(--ember); animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+        .hero h1 {
+            font-family:'Playfair Display',serif; font-size:clamp(3rem,8vw,7rem);
+            font-weight:900; line-height:.95; margin-bottom:1.5rem;
+            background: linear-gradient(135deg, var(--cream) 0%, var(--gold) 50%, var(--cream) 100%);
+            background-size:200% 200%;
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+            background-clip:text;
+            animation: shimmer 6s ease-in-out infinite;
+        }
+        @keyframes shimmer { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+
+        .hero h1 em {
+            font-style:italic; display:block; font-size:.45em;
+            -webkit-text-fill-color: var(--ember); margin-top:.3rem;
+        }
+        .hero p {
+            font-size:clamp(1rem,2vw,1.25rem); line-height:1.7;
+            color:rgba(255,248,240,.7); max-width:550px; margin:0 auto 2.5rem;
+            font-weight:300;
+        }
+        .hero-buttons { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; }
+        .btn {
+            display:inline-flex; align-items:center; gap:.5rem;
+            padding: 1rem 2.2rem; border-radius:60px; font-size:1rem;
+            font-weight:600; text-decoration:none; cursor:pointer; border:none;
+            transition: all .35s cubic-bezier(.25,.46,.45,.94);
+            letter-spacing:.3px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--flame), var(--ember));
+            color:#fff; box-shadow: 0 8px 32px rgba(232,82,14,.35);
+        }
+        .btn-primary:hover { transform:translateY(-3px); box-shadow: 0 12px 44px rgba(232,82,14,.5); }
+        .btn-outline {
+            background:transparent; color:var(--cream);
+            border:1.5px solid rgba(255,248,240,.25);
+        }
+        .btn-outline:hover { border-color:var(--ember); color:var(--ember); transform:translateY(-2px); }
+
+        .scroll-hint {
+            position:absolute; bottom:2rem; left:50%; transform:translateX(-50%);
+            display:flex; flex-direction:column; align-items:center; gap:.5rem;
+            opacity:.4; animation: bob 2s ease-in-out infinite;
+        }
+        @keyframes bob { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(8px)} }
+        .scroll-hint span { font-size:.7rem; text-transform:uppercase; letter-spacing:2px; }
+        .scroll-hint svg { width:20px; height:20px; }
+
+        /* ── MARQUEE ── */
+        .marquee-wrap {
+            padding:1.5rem 0; background:var(--smoke);
+            border-top:1px solid rgba(255,255,255,.05);
+            border-bottom:1px solid rgba(255,255,255,.05);
+            overflow:hidden;
+        }
+        .marquee {
+            display:flex; gap:3rem; animation: scroll-left 25s linear infinite;
+            white-space:nowrap;
+        }
+        .marquee span {
+            font-family:'Playfair Display',serif; font-size:1rem;
+            color:rgba(255,248,240,.25); font-weight:400; text-transform:uppercase;
+            letter-spacing:3px; flex-shrink:0;
+        }
+        .marquee .sep { color:var(--ember); }
+        @keyframes scroll-left { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+        /* ── SECTIONS ── */
+        section { padding: clamp(4rem,10vw,8rem) clamp(1rem,5vw,4rem); }
+
+        .section-label {
+            font-size:.75rem; text-transform:uppercase; letter-spacing:3px;
+            color:var(--ember); font-weight:600; margin-bottom:1rem;
+        }
+        .section-title {
+            font-family:'Playfair Display',serif; font-size:clamp(2rem,5vw,3.5rem);
+            font-weight:900; line-height:1.1; margin-bottom:1.5rem;
+        }
+
+        /* ── ABOUT ── */
+        .about { background: var(--charcoal); }
+        .about-grid {
+            max-width:1200px; margin:0 auto;
+            display:grid; grid-template-columns:1fr 1fr; gap:4rem; align-items:center;
+        }
+        .about-visual {
+            position:relative; aspect-ratio:4/5; border-radius:24px; overflow:hidden;
+            background: linear-gradient(135deg, var(--smoke), var(--charcoal));
+            display:flex; align-items:center; justify-content:center;
+        }
+        .pizza-art {
+            font-size:10rem; filter:drop-shadow(0 20px 60px rgba(232,82,14,.3));
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-15px) rotate(3deg)} }
+        .temp-badge {
+            position:absolute; bottom:1.5rem; left:1.5rem;
+            background:rgba(26,26,26,.85); backdrop-filter:blur(10px);
+            border:1px solid rgba(255,255,255,.1); border-radius:16px;
+            padding:1rem 1.5rem; display:flex; align-items:center; gap:.8rem;
+        }
+        .temp-badge .temp { font-family:'Playfair Display',serif; font-size:2rem; font-weight:900; color:var(--ember); }
+        .temp-badge .temp-label { font-size:.7rem; text-transform:uppercase; letter-spacing:1px; color:rgba(255,248,240,.5); line-height:1.4; }
+
+        .about-text p {
+            color:rgba(255,248,240,.65); font-size:1.05rem; line-height:1.8;
+            margin-bottom:1.5rem; font-weight:300;
+        }
+        .stat-row { display:flex; gap:2.5rem; margin-top:2rem; }
+        .stat-item .stat-num {
+            font-family:'Playfair Display',serif; font-size:2.5rem;
+            font-weight:900; color:var(--ember);
+        }
+        .stat-item .stat-desc {
+            font-size:.8rem; color:rgba(255,248,240,.4);
+            text-transform:uppercase; letter-spacing:1px; margin-top:.2rem;
+        }
+
+        /* ── FEATURES ── */
+        .features { background:var(--smoke); }
+        .features-header { text-align:center; max-width:600px; margin:0 auto 4rem; }
+        .features-header p { color:rgba(255,248,240,.5); margin-top:1rem; font-weight:300; line-height:1.7; }
+        .features-grid {
+            max-width:1100px; margin:0 auto;
+            display:grid; grid-template-columns:repeat(3,1fr); gap:2rem;
+        }
+        .feature-card {
+            background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06);
+            border-radius:20px; padding:2.5rem; transition: all .4s;
+            position:relative; overflow:hidden;
+        }
+        .feature-card::before {
+            content:''; position:absolute; top:0; left:0; right:0; height:2px;
+            background:linear-gradient(90deg, transparent, var(--ember), transparent);
+            opacity:0; transition:opacity .4s;
+        }
+        .feature-card:hover { transform:translateY(-5px); border-color:rgba(232,82,14,.2); background:rgba(232,82,14,.04); }
+        .feature-card:hover::before { opacity:1; }
+        .feature-icon {
+            width:56px; height:56px; border-radius:14px;
+            background: linear-gradient(135deg, rgba(232,82,14,.15), rgba(232,82,14,.05));
+            display:flex; align-items:center; justify-content:center;
+            font-size:1.5rem; margin-bottom:1.5rem;
+        }
+        .feature-card h3 {
+            font-family:'Playfair Display',serif; font-size:1.3rem;
+            font-weight:700; margin-bottom:.8rem;
+        }
+        .feature-card p { color:rgba(255,248,240,.5); font-size:.9rem; line-height:1.7; font-weight:300; }
+
+        /* ── MENU ── */
+        .menu-section { background:var(--charcoal); }
+        .menu-header { text-align:center; max-width:600px; margin:0 auto 4rem; }
+        .menu-header p { color:rgba(255,248,240,.5); margin-top:1rem; font-weight:300; }
+        .menu-grid {
+            max-width:900px; margin:0 auto;
+            display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;
+        }
+        .menu-item {
+            background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06);
+            border-radius:16px; padding:2rem; display:flex; gap:1rem; align-items:flex-start;
+            transition: all .3s;
+        }
+        .menu-item:hover { border-color:rgba(232,82,14,.2); background:rgba(232,82,14,.03); }
+        .menu-emoji { font-size:2rem; flex-shrink:0; margin-top:.2rem; }
+        .menu-item h4 { font-family:'Playfair Display',serif; font-size:1.1rem; margin-bottom:.4rem; }
+        .menu-item p { font-size:.82rem; color:rgba(255,248,240,.45); line-height:1.5; font-weight:300; }
+
+        /* ── REVIEWS ── */
+        .reviews { background:var(--smoke); overflow:hidden; }
+        .reviews-header { text-align:center; max-width:600px; margin:0 auto 4rem; }
+        .reviews-header p { color:rgba(255,248,240,.5); margin-top:1rem; font-weight:300; }
+        .reviews-track {
+            display:flex; gap:1.5rem; animation: scroll-reviews 30s linear infinite;
+        }
+        .review-card {
+            flex-shrink:0; width:380px;
+            background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06);
+            border-radius:20px; padding:2rem;
+        }
+        .review-stars { color:var(--gold); font-size:1rem; margin-bottom:1rem; letter-spacing:2px; }
+        .review-card blockquote {
+            font-size:.95rem; color:rgba(255,248,240,.65); line-height:1.7;
+            font-weight:300; font-style:italic; margin-bottom:1.2rem;
+        }
+        .review-author { font-size:.8rem; color:var(--ember); font-weight:600; text-transform:uppercase; letter-spacing:1px; }
+        @keyframes scroll-reviews { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+        /* ── CTA ── */
+        .cta-section {
+            background: var(--charcoal); text-align:center;
+            position:relative;
+        }
+        .cta-glow {
+            position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+            width:600px; height:600px; border-radius:50%;
+            background:radial-gradient(circle, rgba(232,82,14,.1), transparent 70%);
+            pointer-events:none;
+        }
+        .cta-content { position:relative; z-index:2; max-width:700px; margin:0 auto; }
+        .cta-content .section-title { margin-bottom:1rem; }
+        .cta-content p { color:rgba(255,248,240,.5); margin-bottom:2.5rem; font-weight:300; line-height:1.7; font-size:1.1rem; }
+        .cta-phone {
+            font-family:'Playfair Display',serif; font-size:clamp(1.8rem,4vw,3rem);
+            font-weight:900; color:var(--ember); text-decoration:none;
+            display:inline-block; margin-bottom:2rem;
+            transition: text-shadow .3s;
+        }
+        .cta-phone:hover { text-shadow: 0 0 40px rgba(232,82,14,.5); }
+        .cta-details {
+            display:flex; gap:2rem; justify-content:center; flex-wrap:wrap;
+            margin-top:2rem;
+        }
+        .cta-detail {
+            font-size:.8rem; color:rgba(255,248,240,.4);
+            text-transform:uppercase; letter-spacing:1px;
+            display:flex; align-items:center; gap:.5rem;
+        }
+        .cta-detail svg { width:16px; height:16px; stroke:var(--ember); }
+
+        /* ── FOOTER ── */
+        footer {
+            background:var(--smoke); border-top:1px solid rgba(255,255,255,.05);
+            padding:3rem 2rem;
+        }
+        .footer-inner {
+            max-width:1100px; margin:0 auto;
+            display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.5rem;
+        }
+        .footer-brand {
+            font-family:'Playfair Display',serif; font-size:1.2rem; font-weight:700;
+        }
+        .footer-brand span { color:var(--ember); }
+        .footer-socials { display:flex; gap:1rem; }
+        .footer-socials a {
+            width:40px; height:40px; border-radius:50%;
+            background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);
+            display:flex; align-items:center; justify-content:center;
+            color:var(--cream); text-decoration:none; font-size:.85rem;
+            transition: all .3s;
+        }
+        .footer-socials a:hover { background:var(--flame); border-color:var(--flame); }
+        .footer-copy { font-size:.75rem; color:rgba(255,248,240,.3); width:100%; text-align:center; margin-top:1rem; }
+
+        /* ── MOBILE NAV ── */
+        .mobile-menu {
+            display:none; position:fixed; inset:0; z-index:999;
+            background:rgba(26,26,26,.97); backdrop-filter:blur(30px);
+            flex-direction:column; align-items:center; justify-content:center; gap:2rem;
+        }
+        .mobile-menu.open { display:flex; }
+        .mobile-menu a {
+            font-family:'Playfair Display',serif; font-size:2rem; font-weight:700;
+            color:var(--cream); text-decoration:none; opacity:.7; transition:.3s;
+        }
+        .mobile-menu a:hover { opacity:1; color:var(--ember); }
+        .mobile-close {
+            position:absolute; top:1.5rem; right:1.5rem; background:none; border:none;
+            color:var(--cream); font-size:2rem; cursor:pointer;
+        }
+
+        /* ── FADE-IN ── */
+        .reveal { opacity:0; transform:translateY(40px); transition: opacity .8s, transform .8s; }
+        .reveal.visible { opacity:1; transform:translateY(0); }
+
+        /* ── RESPONSIVE ── */
+        @media(max-width:900px) {
+            .nav-links { display:none; }
+            .hamburger { display:flex; }
+            .about-grid { grid-template-columns:1fr; gap:2rem; }
+            .about-visual { max-height:350px; }
+            .features-grid { grid-template-columns:1fr; }
+            .menu-grid { grid-template-columns:1fr; }
+            .stat-row { gap:1.5rem; }
+        }
+        @media(max-width:600px) {
+            .hero h1 { font-size:clamp(2.5rem,12vw,4rem); }
+            .hero-buttons { flex-direction:column; align-items:center; }
+            .btn { width:100%; max-width:280px; justify-content:center; }
+            .stat-row { flex-direction:column; gap:1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+    <a href="#" class="nav-logo">Carmelo<span>'s</span></a>
+    <div class="nav-links">
+        <a href="#about">About</a>
+        <a href="#features">Why Us</a>
+        <a href="#menu">Menu</a>
+        <a href="#reviews">Reviews</a>
+        <a href="tel:19738008926" class="nav-cta">Book Now</a>
+    </div>
+    <button class="hamburger" onclick="document.getElementById('mobileMenu').classList.add('open')" aria-label="Menu">
+        <span></span><span></span><span></span>
+    </button>
+</nav>
+
+<!-- MOBILE MENU -->
+<div class="mobile-menu" id="mobileMenu">
+    <button class="mobile-close" onclick="this.parentElement.classList.remove('open')">✕</button>
+    <a href="#about" onclick="this.parentElement.classList.remove('open')">About</a>
+    <a href="#features" onclick="this.parentElement.classList.remove('open')">Why Us</a>
+    <a href="#menu" onclick="this.parentElement.classList.remove('open')">Menu</a>
+    <a href="#reviews" onclick="this.parentElement.classList.remove('open')">Reviews</a>
+    <a href="tel:19738008926" onclick="this.parentElement.classList.remove('open')">Call Now</a>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-bg-pattern"></div>
+    <div class="fire-glow"></div>
+    <div class="hero-content">
+        <div class="hero-badge"><span class="dot"></span> New Jersey's #1 Pizza Truck</div>
+        <h1>
+            Wood-Fired<br>Perfection
+            <em>We bring the pizzeria to you</em>
+        </h1>
+        <p>Authentic Neapolitan-style pizza, made fresh from our mobile brick oven at your next event. San Marzano tomatoes, fresh mozzarella, 900°F flames.</p>
+        <div class="hero-buttons">
+            <a href="tel:19738008926" class="btn btn-primary">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                973-800-8926
+            </a>
+            <a href="#about" class="btn btn-outline">Learn More</a>
+        </div>
+    </div>
+    <div class="scroll-hint">
+        <span>Scroll</span>
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+    </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-wrap">
+    <div class="marquee" id="marquee">
+        <span>Wood-Fired</span><span class="sep">◆</span>
+        <span>Neapolitan Style</span><span class="sep">◆</span>
+        <span>San Marzano Tomatoes</span><span class="sep">◆</span>
+        <span>Fresh Mozzarella</span><span class="sep">◆</span>
+        <span>Mobile Brick Oven</span><span class="sep">◆</span>
+        <span>Corporate Events</span><span class="sep">◆</span>
+        <span>Private Parties</span><span class="sep">◆</span>
+        <span>Weddings</span><span class="sep">◆</span>
+        <span>Wood-Fired</span><span class="sep">◆</span>
+        <span>Neapolitan Style</span><span class="sep">◆</span>
+        <span>San Marzano Tomatoes</span><span class="sep">◆</span>
+        <span>Fresh Mozzarella</span><span class="sep">◆</span>
+        <span>Mobile Brick Oven</span><span class="sep">◆</span>
+        <span>Corporate Events</span><span class="sep">◆</span>
+        <span>Private Parties</span><span class="sep">◆</span>
+        <span>Weddings</span><span class="sep">◆</span>
+    </div>
+</div>
+
+<!-- ABOUT -->
+<section class="about" id="about">
+    <div class="about-grid">
+        <div class="about-visual reveal">
+            <div class="pizza-art">🍕</div>
+            <div class="temp-badge">
+                <div class="temp">900°</div>
+                <div class="temp-label">degrees<br>of fire</div>
+            </div>
+        </div>
+        <div class="about-text reveal">
+            <div class="section-label">Our Story</div>
+            <h2 class="section-title">Naples Meets<br>New Jersey</h2>
+            <p>You've had pizza a thousand times — but unless you've been to Naples, you haven't tasted anything like Carmelo's. Our mobile brick oven reaches 900°F, creating that perfect char, bubbly crust, and smoky flavor that only true wood-fired cooking delivers.</p>
+            <p>We use San Marzano tomatoes, fresh mozzarella, herb-infused extra virgin olive oil, and expertly crafted dough — making every single bite unforgettable.</p>
+            <div class="stat-row">
+                <div class="stat-item">
+                    <div class="stat-num">500+</div>
+                    <div class="stat-desc">Events Catered</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-num">5★</div>
+                    <div class="stat-desc">Yelp Rating</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-num">90s</div>
+                    <div class="stat-desc">Seconds Per Pizza</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+    <div class="features-header reveal">
+        <div class="section-label">Why Carmelo's</div>
+        <h2 class="section-title">Not Your Average Caterer</h2>
+        <p>We don't do bland banquet hall food. Every event gets the full Carmelo's experience.</p>
+    </div>
+    <div class="features-grid">
+        <div class="feature-card reveal">
+            <div class="feature-icon">🎨</div>
+            <h3>Custom Menus</h3>
+            <p>We work with you to design a menu that fits your taste, budget, and style. Every event is tailored, never cookie-cutter.</p>
+        </div>
+        <div class="feature-card reveal">
+            <div class="feature-icon">🔥</div>
+            <h3>Live Wood-Fired</h3>
+            <p>Watch your pizza made fresh in our mobile brick oven. It's dinner and a show — guests love the interactive experience.</p>
+        </div>
+        <div class="feature-card reveal">
+            <div class="feature-icon">🌿</div>
+            <h3>Fresh & Local</h3>
+            <p>Locally sourced produce and the finest imported Italian ingredients. No shortcuts, no compromises on quality.</p>
+        </div>
+        <div class="feature-card reveal">
+            <div class="feature-icon">👨‍🍳</div>
+            <h3>Professional Team</h3>
+            <p>Our chefs and servers are committed to making your event spectacular. Full-service from setup to cleanup.</p>
+        </div>
+        <div class="feature-card reveal">
+            <div class="feature-icon">🏢</div>
+            <h3>Corporate Ready</h3>
+            <p>Interactive corporate catering with authentic wood-fired pizzas made fresh on-site. Perfect for team events and client dinners.</p>
+        </div>
+        <div class="feature-card reveal">
+            <div class="feature-icon">💰</div>
+            <h3>Transparent Pricing</h3>
+            <p>Starting at $1,400 for up to 45 guests. No hidden fees. We'll always work to fit your budget.</p>
+        </div>
+    </div>
+</section>
+
+<!-- MENU PREVIEW -->
+<section class="menu-section" id="menu">
+    <div class="menu-header reveal">
+        <div class="section-label">The Menu</div>
+        <h2 class="section-title">Signature Creations</h2>
+        <p>Our specialties — plus we'll collaborate with you over the phone to build a custom menu for your event.</p>
+    </div>
+    <div class="menu-grid">
+        <div class="menu-item reveal">
+            <div class="menu-emoji">🍅</div>
+            <div>
+                <h4>Classic Margherita</h4>
+                <p>San Marzano tomato sauce, fresh mozzarella, basil, extra virgin olive oil</p>
+            </div>
+        </div>
+        <div class="menu-item reveal">
+            <div class="menu-emoji">🧀</div>
+            <div>
+                <h4>White Truffle</h4>
+                <p>Ricotta, mozzarella, truffle oil, garlic, fresh herbs</p>
+            </div>
+        </div>
+        <div class="menu-item reveal">
+            <div class="menu-emoji">🥬</div>
+            <div>
+                <h4>Arugula & Fig</h4>
+                <p>White pizza, fresh arugula, balsamic fig glaze, shaved parmesan</p>
+            </div>
+        </div>
+        <div class="menu-item reveal">
+            <div class="menu-emoji">🌶️</div>
+            <div>
+                <h4>Diavola</h4>
+                <p>Spicy sopressata, San Marzano tomatoes, chili flakes, fresh mozzarella</p>
+            </div>
+        </div>
+        <div class="menu-item reveal">
+            <div class="menu-emoji">🍄</div>
+            <div>
+                <h4>Wild Mushroom</h4>
+                <p>Mixed wild mushrooms, fontina, thyme, garlic oil, fresh mozzarella</p>
+            </div>
+        </div>
+        <div class="menu-item reveal">
+            <div class="menu-emoji">🫒</div>
+            <div>
+                <h4>Mediterranean</h4>
+                <p>Roasted peppers, kalamata olives, artichoke hearts, feta, oregano</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- REVIEWS -->
+<section class="reviews" id="reviews">
+    <div class="reviews-header reveal">
+        <div class="section-label">Reviews</div>
+        <h2 class="section-title">What People Say</h2>
+        <p>Don't take our word for it — hear from people who've experienced Carmelo's firsthand.</p>
+    </div>
+    <div class="reviews-track" id="reviewsTrack">
+        <div class="review-card">
+            <div class="review-stars">★★★★★</div>
+            <blockquote>"Carmelo's was the highlight of our wedding. Guests couldn't stop talking about the pizza — it was better than any restaurant I've been to."</blockquote>
+            <div class="review-author">— Sarah M., Wedding</div>
+        </div>
+        <div class="review-card">
+            <div class="review-stars">★★★★★</div>
+            <blockquote>"We hired them for a corporate event and everyone was blown away. The interactive experience of watching pizza being made was a huge hit."</blockquote>
+            <div class="review-author">— Jason R., Corporate Event</div>
+        </div>
+        <div class="review-card">
+            <div class="review-stars">★★★★★</div>
+            <blockquote>"Best pizza in New Jersey, hands down. The crust, the sauce, the fresh mozzarella — everything was absolutely perfect."</blockquote>
+            <div class="review-author">— Maria L., Birthday Party</div>
+        </div>
+        <div class="review-card">
+            <div class="review-stars">★★★★★</div>
+            <blockquote>"Billy and the team were incredibly professional. They showed up early, set up, served incredible food, and left the place spotless."</blockquote>
+            <div class="review-author">— Tom D., Graduation Party</div>
+        </div>
+        <div class="review-card">
+            <div class="review-stars">★★★★★</div>
+            <blockquote>"Carmelo's was the highlight of our wedding. Guests couldn't stop talking about the pizza — it was better than any restaurant I've been to."</blockquote>
+            <div class="review-author">— Sarah M., Wedding</div>
+        </div>
+        <div class="review-card">
+            <div class="review-stars">★★★★★</div>
+            <blockquote>"We hired them for a corporate event and everyone was blown away. The interactive experience of watching pizza being made was a huge hit."</blockquote>
+            <div class="review-author">— Jason R., Corporate Event</div>
+        </div>
+        <div class="review-card">
+            <div class="review-stars">★★★★★</div>
+            <blockquote>"Best pizza in New Jersey, hands down. The crust, the sauce, the fresh mozzarella — everything was absolutely perfect."</blockquote>
+            <div class="review-author">— Maria L., Birthday Party</div>
+        </div>
+        <div class="review-card">
+            <div class="review-stars">★★★★★</div>
+            <blockquote>"Billy and the team were incredibly professional. They showed up early, set up, served incredible food, and left the place spotless."</blockquote>
+            <div class="review-author">— Tom D., Graduation Party</div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+    <div class="cta-glow"></div>
+    <div class="cta-content reveal">
+        <div class="section-label">Book Your Event</div>
+        <h2 class="section-title">Ready to Make Your Next Event Unforgettable?</h2>
+        <p>Whether it's a wedding, corporate event, birthday, or backyard party — we'll bring the heat. Give us a call or email to start planning.</p>
+        <a href="tel:19738008926" class="cta-phone">973-800-8926</a>
+        <br>
+        <a href="mailto:carmelosoven@gmail.com" class="btn btn-primary" style="margin-top:1rem;">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            Email Us
+        </a>
+        <div class="cta-details">
+            <div class="cta-detail">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                New Jersey & Tri-State Area
+            </div>
+            <div class="cta-detail">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                Starting at $1,400
+            </div>
+            <div class="cta-detail">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                45+ Guests
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <div class="footer-inner">
+        <div class="footer-brand">Carmelo<span>'s</span> Brick Oven Pizza</div>
+        <div class="footer-socials">
+            <a href="https://www.facebook.com/carmelosbrickovenpizza/" target="_blank" rel="noopener" aria-label="Facebook">f</a>
+            <a href="https://www.instagram.com/carmelosoven/" target="_blank" rel="noopener" aria-label="Instagram">ig</a>
+            <a href="https://www.yelp.com/biz/carmelos-brick-oven-pizzas-kinnelon" target="_blank" rel="noopener" aria-label="Yelp">y</a>
+        </div>
+        <div class="footer-copy">© 2026 Carmelo's Brick Oven Pizza — New Jersey's Finest Pizza Truck</div>
+    </div>
+</footer>
+
+<script>
+    // Nav scroll effect
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+        nav.classList.toggle('scrolled', window.scrollY > 50);
+    });
+
+    // Reveal on scroll
+    const reveals = document.querySelectorAll('.reveal');
+    const io = new IntersectionObserver((entries) => {
+        entries.forEach((e, i) => {
+            if (e.isIntersecting) {
+                setTimeout(() => e.target.classList.add('visible'), i * 100);
+                io.unobserve(e.target);
+            }
+        });
+    }, { threshold: 0.15 });
+    reveals.forEach(el => io.observe(el));
+
+    // Parallax fire glow
+    window.addEventListener('scroll', () => {
+        const glow = document.querySelector('.fire-glow');
+        if (glow) glow.style.transform = `translateX(-50%) translateY(${window.scrollY * 0.15}px)`;
+    });
+</script>
+</body>
+</html>

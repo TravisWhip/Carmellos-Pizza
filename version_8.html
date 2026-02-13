@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carmelo's Brick Oven Pizza | We Bring the Pizzeria to You</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,700&display=swap');
+
+        :root{
+            --bg:#FAFAFA;
+            --card:#FFFFFF;
+            --ink:#111;
+            --sub:#777;
+            --border:#E8E8E8;
+            --pop:#E94235;
+            --pop2:#FF6F3C;
+            --green:#34A853;
+            --blue:#4285F4;
+            --yellow:#FBBC05;
+            --radius:20px;
+        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        html{scroll-behavior:smooth}
+        body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--ink);overflow-x:hidden}
+
+        /* ── NAV ── */
+        nav{
+            position:fixed;top:0;left:0;right:0;z-index:100;
+            padding:.8rem 1.5rem;display:flex;align-items:center;justify-content:space-between;
+            background:rgba(250,250,250,.8);backdrop-filter:blur(20px) saturate(1.3);
+            border-bottom:1px solid var(--border);
+        }
+        .nl{font-family:'Fraunces',serif;font-size:1.2rem;font-weight:900;color:var(--ink);text-decoration:none}
+        .nl span{color:var(--pop)}
+        .nr{display:flex;gap:1.5rem;align-items:center}
+        .nr a{color:var(--sub);text-decoration:none;font-size:.78rem;font-weight:500;transition:.3s}
+        .nr a:hover{color:var(--ink)}
+        .nr .cb{
+            background:var(--ink);color:#fff;padding:.45rem 1.2rem;
+            border-radius:var(--radius);font-weight:600;font-size:.78rem;
+        }
+        .nr .cb:hover{background:var(--pop);color:#fff}
+        .hb{display:none;background:none;border:none;cursor:pointer;width:32px;height:32px;border-radius:8px;
+            display:none;align-items:center;justify-content:center;background:var(--card);border:1px solid var(--border)}
+        .hb svg{width:16px;height:16px;stroke:var(--ink)}
+
+        /* ── HERO ── */
+        .hero{
+            min-height:100vh;display:flex;align-items:center;
+            padding:6rem 1.5rem 3rem;
+        }
+        .hero-inner{
+            max-width:1200px;margin:0 auto;width:100%;
+            display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:center;
+        }
+        .hero-left{max-width:520px}
+        .hero-pills{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1.5rem}
+        .hp{
+            font-size:.6rem;font-weight:600;padding:.3rem .7rem;
+            border-radius:100px;letter-spacing:.3px;
+            display:inline-flex;align-items:center;gap:.3rem;
+        }
+        .hp.r{background:#FDECEA;color:var(--pop)}
+        .hp.g{background:#E6F4EA;color:var(--green)}
+        .hp.b{background:#E8F0FE;color:var(--blue)}
+        .hp .hd{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+        .hero h1{
+            font-family:'Fraunces',serif;font-size:clamp(2.8rem,5.5vw,4.5rem);
+            font-weight:900;line-height:.98;letter-spacing:-1.5px;margin-bottom:1.2rem;
+        }
+        .hero h1 .acc{color:var(--pop);font-style:italic}
+        .hero-p{font-size:1rem;color:var(--sub);line-height:1.75;margin-bottom:2rem;max-width:420px}
+        .hero-acts{display:flex;gap:.6rem;flex-wrap:wrap}
+        .bt{
+            display:inline-flex;align-items:center;gap:.4rem;
+            padding:.7rem 1.5rem;border-radius:var(--radius);font-size:.85rem;
+            font-weight:600;text-decoration:none;border:none;cursor:pointer;transition:all .25s;
+        }
+        .bt svg{width:15px;height:15px}
+        .bt1{background:var(--ink);color:#fff}
+        .bt1:hover{background:var(--pop);transform:translateY(-2px);box-shadow:0 8px 24px rgba(233,66,53,.2)}
+        .bt2{background:var(--card);color:var(--ink);border:1px solid var(--border)}
+        .bt2:hover{border-color:var(--ink);transform:translateY(-2px)}
+
+        /* hero right - stacked cards */
+        .hero-right{position:relative;height:420px}
+        .hero-card{
+            position:absolute;background:var(--card);border:1px solid var(--border);
+            border-radius:var(--radius);padding:1.5rem;
+            box-shadow:0 4px 20px rgba(0,0,0,.04);
+            transition:transform .5s cubic-bezier(.22,1,.36,1);
+        }
+        .hero-card:hover{transform:translateY(-6px) rotate(0deg)!important}
+        .hc1{width:220px;top:0;right:10%;transform:rotate(-3deg);z-index:3}
+        .hc2{width:200px;top:120px;right:40%;transform:rotate(2deg);z-index:2}
+        .hc3{width:240px;top:220px;right:5%;transform:rotate(-1deg);z-index:1}
+        .hc-icon{font-size:2rem;margin-bottom:.8rem}
+        .hc-title{font-family:'Fraunces',serif;font-size:1rem;font-weight:700;margin-bottom:.3rem}
+        .hc-sub{font-size:.72rem;color:var(--sub);line-height:1.5}
+        .hc-tag{
+            display:inline-block;margin-top:.6rem;font-size:.55rem;font-weight:600;
+            padding:.2rem .5rem;border-radius:6px;letter-spacing:.5px;
+        }
+        .hc-tag.t-r{background:#FDECEA;color:var(--pop)}
+        .hc-tag.t-g{background:#E6F4EA;color:var(--green)}
+        .hc-tag.t-y{background:#FEF7E0;color:#F9A825}
+
+        /* ── HORIZONTAL SCROLL ── */
+        .hscroll-wrap{
+            padding:4rem 0;overflow:hidden;
+            border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+        }
+        .hscroll-label{
+            font-size:.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+            color:var(--pop);margin-bottom:.5rem;padding-left:1.5rem;
+        }
+        .hscroll-title{
+            font-family:'Fraunces',serif;font-size:clamp(1.8rem,3.5vw,2.5rem);
+            font-weight:900;letter-spacing:-1px;margin-bottom:2rem;padding-left:1.5rem;
+        }
+        .hscroll{
+            display:flex;gap:1rem;padding:0 1.5rem;
+            overflow-x:auto;scroll-snap-type:x mandatory;
+            scrollbar-width:none;-ms-overflow-style:none;
+        }
+        .hscroll::-webkit-scrollbar{display:none}
+        .hs-card{
+            flex-shrink:0;width:300px;scroll-snap-align:start;
+            background:var(--card);border:1px solid var(--border);
+            border-radius:var(--radius);padding:2rem;transition:all .3s;
+            position:relative;overflow:hidden;
+        }
+        .hs-card:hover{border-color:var(--pop);box-shadow:0 8px 30px rgba(0,0,0,.06)}
+        .hs-num{
+            position:absolute;top:1rem;right:1.2rem;
+            font-family:'Fraunces',serif;font-size:3rem;font-weight:900;
+            color:rgba(0,0,0,.03);line-height:1;
+        }
+        .hs-card .hs-i{font-size:2rem;margin-bottom:1rem}
+        .hs-card h3{font-family:'Fraunces',serif;font-size:1.05rem;font-weight:700;margin-bottom:.5rem}
+        .hs-card p{font-size:.82rem;color:var(--sub);line-height:1.65}
+
+        /* drag hint */
+        .drag-hint{
+            display:flex;align-items:center;gap:.5rem;padding:1rem 1.5rem 0;
+            font-size:.65rem;color:var(--sub);font-weight:500;
+        }
+        .drag-hint svg{width:14px;height:14px;stroke:var(--sub);animation:nudge 2s ease-in-out infinite}
+        @keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+
+        /* ── MENU ── */
+        .menu-s{padding:4rem 1.5rem;max-width:1000px;margin:0 auto}
+        .menu-s .hscroll-label{padding-left:0;text-align:center}
+        .menu-s .hscroll-title{padding-left:0;text-align:center}
+        .menu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+        .mg-card{
+            background:var(--card);border:1px solid var(--border);
+            border-radius:var(--radius);padding:1.5rem;text-align:center;
+            transition:all .3s;cursor:default;
+        }
+        .mg-card:hover{border-color:var(--pop);transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.05)}
+        .mg-card .em{font-size:2.5rem;display:block;margin-bottom:.8rem}
+        .mg-card h4{font-family:'Fraunces',serif;font-size:.95rem;font-weight:700;margin-bottom:.3rem}
+        .mg-card p{font-size:.72rem;color:var(--sub);line-height:1.5}
+
+        /* ── REVIEWS ── */
+        .rev-s{
+            padding:4rem 1.5rem;border-top:1px solid var(--border);
+            max-width:1000px;margin:0 auto;
+        }
+        .rev-s .hscroll-label{padding-left:0;text-align:center}
+        .rev-s .hscroll-title{padding-left:0;text-align:center}
+        .rev-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+        .rv-card{
+            background:var(--card);border:1px solid var(--border);
+            border-radius:var(--radius);padding:1.8rem;
+            display:flex;flex-direction:column;justify-content:space-between;
+            transition:all .3s;
+        }
+        .rv-card:hover{border-color:var(--pop);box-shadow:0 8px 24px rgba(0,0,0,.05)}
+        .rv-card .stars{font-size:.7rem;color:var(--pop);letter-spacing:1px;margin-bottom:.8rem}
+        .rv-card blockquote{
+            font-family:'Fraunces',serif;font-style:italic;
+            font-size:.92rem;color:var(--ink);line-height:1.65;margin-bottom:1rem;
+            flex:1;
+        }
+        .rv-card .rw{font-size:.7rem;font-weight:700}
+        .rv-card .re{font-size:.6rem;color:var(--sub);margin-top:.15rem}
+
+        /* ── CTA ── */
+        .cta-s{
+            padding:4rem 1.5rem;border-top:1px solid var(--border);
+        }
+        .cta-box{
+            max-width:800px;margin:0 auto;
+            background:var(--ink);color:#fff;border-radius:24px;
+            padding:clamp(2.5rem,5vw,4rem);text-align:center;
+            position:relative;overflow:hidden;
+        }
+        .cta-box::before{
+            content:'';position:absolute;top:-60%;right:-20%;width:400px;height:400px;
+            border-radius:50%;background:rgba(233,66,53,.12);filter:blur(60px);
+        }
+        .cta-box::after{
+            content:'';position:absolute;bottom:-50%;left:-15%;width:300px;height:300px;
+            border-radius:50%;background:rgba(66,133,244,.08);filter:blur(50px);
+        }
+        .cta-box .cl{color:rgba(255,255,255,.35);font-size:.6rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:1rem;position:relative;z-index:1}
+        .cta-box h2{
+            font-family:'Fraunces',serif;font-size:clamp(2rem,4vw,3rem);
+            font-weight:900;letter-spacing:-1px;line-height:1;margin-bottom:.8rem;
+            position:relative;z-index:1;
+        }
+        .cta-box h2 .acc{color:var(--pop);font-style:italic}
+        .cta-box>p{color:rgba(255,255,255,.5);line-height:1.7;max-width:420px;margin:0 auto 2rem;position:relative;z-index:1}
+        .cta-phone{
+            font-family:'Fraunces',serif;font-size:clamp(1.8rem,4vw,2.8rem);
+            font-weight:900;color:#fff;text-decoration:none;display:inline-block;
+            margin-bottom:1.5rem;letter-spacing:-1px;position:relative;z-index:1;
+            transition:.3s;
+        }
+        .cta-phone:hover{color:var(--pop)}
+        .cta-btns{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;margin-bottom:2rem;position:relative;z-index:1}
+        .btw{background:#fff;color:var(--ink)}
+        .btw:hover{background:var(--pop);color:#fff;transform:translateY(-2px)}
+        .bto{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.15)}
+        .bto:hover{border-color:#fff;transform:translateY(-2px)}
+        .cta-pills{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;position:relative;z-index:1}
+        .cp{font-size:.6rem;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1.5px;font-weight:600}
+
+        /* ── FOOTER ── */
+        footer{
+            padding:1.5rem;display:flex;justify-content:space-between;
+            align-items:center;flex-wrap:wrap;gap:.8rem;
+            max-width:1000px;margin:0 auto;
+        }
+        .fl{font-family:'Fraunces',serif;font-size:.9rem;font-weight:900}
+        .fl span{color:var(--pop)}
+        .fsoc{display:flex;gap:.4rem}
+        .fsoc a{
+            width:28px;height:28px;border-radius:8px;border:1px solid var(--border);
+            display:flex;align-items:center;justify-content:center;
+            color:var(--sub);text-decoration:none;font-size:.55rem;font-weight:700;
+            background:var(--card);transition:.3s;
+        }
+        .fsoc a:hover{background:var(--ink);color:#fff;border-color:var(--ink)}
+        .fcp{width:100%;text-align:center;font-size:.55rem;color:#ccc;margin-top:.3rem}
+
+        /* ── MOBILE ── */
+        .mm{
+            display:none;position:fixed;inset:0;z-index:999;background:var(--bg);
+            flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;
+        }
+        .mm.open{display:flex}
+        .mm a{font-family:'Fraunces',serif;font-size:1.8rem;font-weight:900;color:var(--ink);text-decoration:none}
+        .mm a:hover{color:var(--pop)}
+        .mm-x{position:absolute;top:1rem;right:1.5rem;background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--ink)}
+
+        /* ── REVEAL ── */
+        .rv{opacity:0;transform:translateY(15px);transition:opacity .5s,transform .5s}
+        .rv.vi{opacity:1;transform:none}
+
+        @media(max-width:900px){
+            .nr{display:none}.hb{display:flex}
+            .hero-inner{grid-template-columns:1fr;text-align:center}
+            .hero-left{max-width:100%;margin:0 auto}
+            .hero-p{margin:0 auto 2rem}
+            .hero-acts{justify-content:center}
+            .hero-pills{justify-content:center}
+            .hero-right{height:auto;display:flex;flex-wrap:wrap;gap:1rem;justify-content:center;padding:1rem 0}
+            .hero-card{position:static;transform:none!important;width:100%;max-width:280px}
+            .menu-grid{grid-template-columns:1fr 1fr}
+            .rev-grid{grid-template-columns:1fr}
+        }
+        @media(max-width:550px){
+            .menu-grid{grid-template-columns:1fr}
+            .hero-acts,.cta-btns{flex-direction:column;align-items:center}
+            .bt{width:100%;max-width:280px;justify-content:center}
+            .cta-pills{flex-direction:column;align-items:center}
+        }
+    </style>
+</head>
+<body>
+
+<div class="mm" id="mm">
+    <button class="mm-x" onclick="this.parentElement.classList.remove('open')">✕</button>
+    <a href="#about" onclick="this.parentElement.classList.remove('open')">About</a>
+    <a href="#menu" onclick="this.parentElement.classList.remove('open')">Menu</a>
+    <a href="#reviews" onclick="this.parentElement.classList.remove('open')">Reviews</a>
+    <a href="tel:19738008926" onclick="this.parentElement.classList.remove('open')">Book</a>
+</div>
+
+<!-- NAV -->
+<nav>
+    <a href="#" class="nl">Carmelo<span>'s</span></a>
+    <div class="nr">
+        <a href="#about">About</a>
+        <a href="#menu">Menu</a>
+        <a href="#reviews">Reviews</a>
+        <a href="tel:19738008926" class="cb">Book Event</a>
+    </div>
+    <button class="hb" onclick="document.getElementById('mm').classList.add('open')">
+        <svg fill="none" stroke-width="2" viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+    </button>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-inner">
+        <div class="hero-left rv">
+            <div class="hero-pills">
+                <span class="hp r"><span class="hd"></span>Wood-Fired</span>
+                <span class="hp g"><span class="hd"></span>Available Now</span>
+                <span class="hp b"><span class="hd"></span>NJ & Tri-State</span>
+            </div>
+            <h1>Pizza that comes <span class="acc">to you.</span></h1>
+            <p class="hero-p">Neapolitan-style pizza from our 900°F mobile brick oven. San Marzano tomatoes, fresh mozzarella, handcrafted dough — 90 seconds from oven to plate.</p>
+            <div class="hero-acts">
+                <a href="tel:19738008926" class="bt bt1">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                    973-800-8926
+                </a>
+                <a href="mailto:carmelosoven@gmail.com" class="bt bt2">Email Us</a>
+            </div>
+        </div>
+        <div class="hero-right">
+            <div class="hero-card hc1 rv">
+                <div class="hc-icon">🔥</div>
+                <div class="hc-title">900°F Brick Oven</div>
+                <div class="hc-sub">Authentic wood-fired cooking with real logs — not gas</div>
+                <span class="hc-tag t-r">Signature</span>
+            </div>
+            <div class="hero-card hc2 rv">
+                <div class="hc-icon">⭐</div>
+                <div class="hc-title">5-Star Rated</div>
+                <div class="hc-sub">Consistently top-rated on Yelp and Google</div>
+                <span class="hc-tag t-g">Verified</span>
+            </div>
+            <div class="hero-card hc3 rv">
+                <div class="hc-icon">🎉</div>
+                <div class="hc-title">500+ Events</div>
+                <div class="hc-sub">Weddings, corporate, birthdays — we've done it all</div>
+                <span class="hc-tag t-y">Experienced</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- HORIZONTAL SCROLL SERVICES -->
+<div class="hscroll-wrap" id="about">
+    <div class="hscroll-label rv">Why Carmelo's</div>
+    <div class="hscroll-title rv">What makes us different</div>
+    <div class="hscroll">
+        <div class="hs-card"><div class="hs-num">01</div><div class="hs-i">🎨</div><h3>Custom Menus</h3><p>We build every menu around your event — your taste, budget, and style. No two events are the same.</p></div>
+        <div class="hs-card"><div class="hs-num">02</div><div class="hs-i">🎪</div><h3>Live Cooking Show</h3><p>Guests watch pizza come to life in our mobile brick oven. It's dinner, entertainment, and a talking point in one.</p></div>
+        <div class="hs-card"><div class="hs-num">03</div><div class="hs-i">🌿</div><h3>Premium Ingredients</h3><p>San Marzano tomatoes, fresh mozzarella, locally sourced produce, and imported Italian essentials. No shortcuts.</p></div>
+        <div class="hs-card"><div class="hs-num">04</div><div class="hs-i">👨‍🍳</div><h3>Full-Service Team</h3><p>Professional chefs and servers handle setup, cooking, serving, and cleanup. You just enjoy the party.</p></div>
+        <div class="hs-card"><div class="hs-num">05</div><div class="hs-i">🏢</div><h3>Corporate Ready</h3><p>Team lunches, client dinners, company milestones — interactive wood-fired catering that impresses.</p></div>
+        <div class="hs-card"><div class="hs-num">06</div><div class="hs-i">💰</div><h3>Clear Pricing</h3><p>Starting at $1,400 for 45 guests. No hidden fees. We'll always work within your budget.</p></div>
+    </div>
+    <div class="drag-hint">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        Scroll to explore
+    </div>
+</div>
+
+<!-- MENU -->
+<section class="menu-s" id="menu">
+    <div class="hscroll-label rv">The Menu</div>
+    <div class="hscroll-title rv" style="text-align:center">Signature pizzas</div>
+    <div class="menu-grid">
+        <div class="mg-card rv"><span class="em">🍅</span><h4>Classic Margherita</h4><p>San Marzano, fresh mozz, basil, EVOO</p></div>
+        <div class="mg-card rv"><span class="em">🧀</span><h4>White Truffle</h4><p>Ricotta, mozz, truffle oil, garlic, herbs</p></div>
+        <div class="mg-card rv"><span class="em">🥬</span><h4>Arugula & Fig</h4><p>White base, arugula, fig glaze, parmesan</p></div>
+        <div class="mg-card rv"><span class="em">🌶️</span><h4>Diavola</h4><p>Sopressata, San Marzano, chili, mozz</p></div>
+        <div class="mg-card rv"><span class="em">🍄</span><h4>Wild Mushroom</h4><p>Mixed mushrooms, fontina, thyme, garlic oil</p></div>
+        <div class="mg-card rv"><span class="em">🫒</span><h4>Mediterranean</h4><p>Peppers, olives, artichoke, feta, oregano</p></div>
+    </div>
+</section>
+
+<!-- REVIEWS -->
+<section class="rev-s" id="reviews">
+    <div class="hscroll-label rv">Reviews</div>
+    <div class="hscroll-title rv" style="text-align:center">What people say</div>
+    <div class="rev-grid">
+        <div class="rv-card rv">
+            <div><div class="stars">★★★★★</div>
+                <blockquote>"Carmelo's was the highlight of our wedding. Guests couldn't stop talking about the pizza — better than any restaurant."</blockquote></div>
+            <div><div class="rw">Sarah M.</div><div class="re">Wedding Reception</div></div>
+        </div>
+        <div class="rv-card rv">
+            <div><div class="stars">★★★★★</div>
+                <blockquote>"We hired them for a corporate event and everyone was blown away. The live cooking experience was a massive hit."</blockquote></div>
+            <div><div class="rw">Jason R.</div><div class="re">Corporate Event</div></div>
+        </div>
+        <div class="rv-card rv">
+            <div><div class="stars">★★★★★</div>
+                <blockquote>"Best pizza in New Jersey, hands down. The crust, sauce, fresh mozzarella — everything was absolutely perfect."</blockquote></div>
+            <div><div class="rw">Maria L.</div><div class="re">Birthday Party</div></div>
+        </div>
+        <div class="rv-card rv">
+            <div><div class="stars">★★★★★</div>
+                <blockquote>"Billy and the team were incredibly professional. Showed up early, served amazing food, left the place spotless."</blockquote></div>
+            <div><div class="rw">Tom D.</div><div class="re">Graduation Party</div></div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-s">
+    <div class="cta-box rv">
+        <div class="cl">Book Your Event</div>
+        <h2>Ready to make it <span class="acc">unforgettable?</span></h2>
+        <p>Weddings, corporate, birthdays, backyard parties — we bring Naples to your door.</p>
+        <a href="tel:19738008926" class="cta-phone">973-800-8926</a><br>
+        <div class="cta-btns">
+            <a href="mailto:carmelosoven@gmail.com" class="bt btw">
+                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                Email Us
+            </a>
+            <a href="https://www.carmelosbrickovenpizzas.com/rates" class="bt bto" target="_blank">Get a Quote →</a>
+        </div>
+        <div class="cta-pills">
+            <span class="cp">New Jersey & Tri-State</span>
+            <span class="cp">From $1,400</span>
+            <span class="cp">45+ Guests</span>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <div class="fl">Carmelo<span>'s</span></div>
+    <div class="fsoc">
+        <a href="https://www.facebook.com/carmelosbrickovenpizza/" target="_blank">Fb</a>
+        <a href="https://www.instagram.com/carmelosoven/" target="_blank">Ig</a>
+        <a href="https://www.yelp.com/biz/carmelos-brick-oven-pizzas-kinnelon" target="_blank">Ye</a>
+    </div>
+    <div class="fcp">© 2026 Carmelo's Brick Oven Pizza · New Jersey's Finest Pizza Truck</div>
+</footer>
+
+<script>
+    // Reveal
+    const io=new IntersectionObserver(entries=>{
+        entries.forEach((e,i)=>{
+            if(e.isIntersecting){setTimeout(()=>e.target.classList.add('vi'),i*40);io.unobserve(e.target)}
+        });
+    },{threshold:.08});
+    document.querySelectorAll('.rv').forEach(el=>io.observe(el));
+
+    // Horizontal scroll drag
+    const hs=document.querySelector('.hscroll');
+    if(hs){
+        let down=false,startX,sl;
+        hs.addEventListener('mousedown',e=>{down=true;startX=e.pageX-hs.offsetLeft;sl=hs.scrollLeft;hs.style.cursor='grabbing'});
+        hs.addEventListener('mouseleave',()=>{down=false;hs.style.cursor=''});
+        hs.addEventListener('mouseup',()=>{down=false;hs.style.cursor=''});
+        hs.addEventListener('mousemove',e=>{if(!down)return;e.preventDefault();hs.scrollLeft=sl-(e.pageX-hs.offsetLeft-startX)*1.5});
+    }
+</script>
+</body>
+</html>

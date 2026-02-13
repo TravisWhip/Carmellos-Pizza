@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carmelo's Brick Oven Pizza | We Bring the Pizzeria to You</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800;900&family=Newsreader:ital,wght@0,400;0,600;1,400&display=swap');
+
+        :root{
+            --bg:#050505;
+            --card:#0C0C0C;
+            --border:rgba(255,255,255,.06);
+            --w:#F4F4F4;
+            --wm:rgba(244,244,244,.5);
+            --wd:rgba(244,244,244,.25);
+            --acc:#FF5722;
+            --acc2:#FF8A65;
+            --green:#8BC34A;
+        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        html{scroll-behavior:smooth}
+        body{font-family:'Cabinet Grotesk','Helvetica Neue',sans-serif;background:var(--bg);color:var(--w);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+
+        /* ── GRAIN ── */
+        .grain{
+            position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:.035;
+            background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            background-size:128px 128px;
+        }
+
+        /* ── NAV ── */
+        nav{
+            position:fixed;top:0;left:0;right:0;z-index:100;
+            padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;
+            transition:all .5s;
+        }
+        nav.s{background:rgba(5,5,5,.8);backdrop-filter:blur(24px) saturate(1.2);border-bottom:1px solid var(--border)}
+        .logo{font-size:1.1rem;font-weight:900;letter-spacing:-0.5px;color:var(--w);text-decoration:none}
+        .logo span{color:var(--acc)}
+        .nv{display:flex;gap:1.8rem;align-items:center}
+        .nv a{color:var(--wd);text-decoration:none;font-size:.78rem;font-weight:500;transition:.3s;letter-spacing:.3px}
+        .nv a:hover{color:var(--w)}
+        .nv .cta{color:var(--bg)!important;background:var(--w);padding:.45rem 1.2rem;border-radius:8px;font-weight:700}
+        .nv .cta:hover{background:var(--acc);color:#fff!important}
+        .hm{display:none;background:none;border:none;cursor:pointer}
+        .hm span{display:block;width:18px;height:1.5px;background:var(--w);margin:4px 0}
+
+        /* ── HERO ── */
+        .hero{
+            min-height:100vh;display:flex;align-items:center;
+            padding:8rem 2rem 4rem;position:relative;overflow:hidden;
+        }
+        .hero-grd{
+            position:absolute;inset:0;
+            background:
+                    radial-gradient(ellipse at 20% 50%, rgba(255,87,34,.07), transparent 50%),
+                    radial-gradient(ellipse at 80% 30%, rgba(139,195,74,.04), transparent 40%);
+        }
+        .hero-inner{max-width:1300px;margin:0 auto;width:100%;display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center}
+        .hero-left{position:relative;z-index:2}
+        .hero-chips{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:2rem}
+        .chip{
+            font-size:.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+            padding:.35rem .9rem;border-radius:100px;border:1px solid var(--border);
+            color:var(--wd);display:inline-flex;align-items:center;gap:.4rem;
+        }
+        .chip .dot{width:5px;height:5px;border-radius:50%}
+        .chip .dot.g{background:var(--green)}
+        .chip .dot.o{background:var(--acc)}
+
+        .hero h1{
+            font-size:clamp(3rem,6.5vw,5.5rem);font-weight:900;
+            line-height:.95;letter-spacing:-2px;margin-bottom:1.5rem;
+        }
+        .hero h1 .em{
+            font-family:'Newsreader',serif;font-style:italic;font-weight:400;
+            color:var(--acc2);letter-spacing:0;
+        }
+        .hero-p{font-size:1.05rem;color:var(--wm);line-height:1.75;max-width:440px;margin-bottom:2.5rem;font-weight:400}
+        .hero-acts{display:flex;gap:.8rem;flex-wrap:wrap}
+        .b{
+            display:inline-flex;align-items:center;gap:.5rem;
+            padding:.85rem 1.8rem;border-radius:12px;font-size:.88rem;
+            font-weight:600;text-decoration:none;border:none;cursor:pointer;transition:all .3s;
+        }
+        .b svg{width:16px;height:16px}
+        .b1{background:var(--acc);color:#fff}
+        .b1:hover{background:#ff7043;transform:translateY(-2px);box-shadow:0 8px 30px rgba(255,87,34,.3)}
+        .b2{background:rgba(255,255,255,.06);color:var(--w);border:1px solid var(--border)}
+        .b2:hover{background:rgba(255,255,255,.1);transform:translateY(-2px)}
+
+        .hero-right{position:relative;display:flex;justify-content:center;align-items:center}
+        .hero-3d{
+            width:100%;aspect-ratio:1;position:relative;
+            perspective:800px;display:flex;align-items:center;justify-content:center;
+        }
+        .orbit{
+            position:absolute;width:85%;height:85%;border-radius:50%;
+            border:1px dashed rgba(255,255,255,.05);
+            animation:orb 25s linear infinite;
+        }
+        .orbit:nth-child(2){width:65%;height:65%;animation-duration:18s;animation-direction:reverse}
+        .orbit:nth-child(3){width:45%;height:45%;animation-duration:12s}
+        @keyframes orb{to{transform:rotate(360deg)}}
+        .orbit-dot{
+            position:absolute;width:10px;height:10px;border-radius:50%;
+            top:-5px;left:50%;transform:translateX(-50%);
+        }
+        .orbit-dot.d1{background:var(--acc);box-shadow:0 0 12px rgba(255,87,34,.5)}
+        .orbit-dot.d2{background:var(--green);box-shadow:0 0 12px rgba(139,195,74,.5)}
+        .orbit-dot.d3{background:var(--acc2);box-shadow:0 0 12px rgba(255,138,101,.5)}
+        .center-badge{
+            width:140px;height:140px;border-radius:50%;
+            background:linear-gradient(135deg,rgba(255,87,34,.15),rgba(255,87,34,.05));
+            border:1px solid rgba(255,87,34,.2);
+            display:flex;flex-direction:column;align-items:center;justify-content:center;
+            position:relative;z-index:2;
+        }
+        .center-badge .t{font-size:2.5rem;font-weight:900;color:var(--acc);line-height:1}
+        .center-badge .u{font-size:.55rem;color:var(--wd);text-transform:uppercase;letter-spacing:2px;margin-top:.2rem}
+
+        .hero-float{
+            position:absolute;background:var(--card);border:1px solid var(--border);
+            border-radius:12px;padding:.8rem 1.1rem;display:flex;align-items:center;gap:.6rem;
+            font-size:.75rem;font-weight:500;color:var(--wm);
+            box-shadow:0 8px 32px rgba(0,0,0,.3);
+            animation:fl 5s ease-in-out infinite;
+        }
+        .hero-float .ic{font-size:1.2rem}
+        .hero-float.f1{top:15%;right:0;animation-delay:0s}
+        .hero-float.f2{bottom:20%;left:0;animation-delay:-2s}
+        .hero-float.f3{top:55%;right:-10%;animation-delay:-3.5s}
+        @keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+
+        /* ── LOGOS / TRUST ── */
+        .trust{
+            padding:2.5rem 2rem;border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+            text-align:center;
+        }
+        .trust p{font-size:.6rem;color:var(--wd);text-transform:uppercase;letter-spacing:3px;font-weight:600;margin-bottom:1.2rem}
+        .trust-items{display:flex;justify-content:center;gap:3rem;flex-wrap:wrap;align-items:center}
+        .trust-item{
+            font-size:.85rem;font-weight:700;color:rgba(255,255,255,.12);letter-spacing:1px;
+            text-transform:uppercase;
+        }
+
+        /* ── BENTO GRID ── */
+        .bento{
+            padding:clamp(4rem,8vw,7rem) 2rem;max-width:1300px;margin:0 auto;
+        }
+        .bento-label{
+            font-size:.6rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;
+            color:var(--acc);margin-bottom:1rem;
+        }
+        .bento h2{
+            font-size:clamp(2rem,4vw,3rem);font-weight:900;letter-spacing:-1px;
+            margin-bottom:3rem;line-height:1.1;
+        }
+        .bento h2 .em{font-family:'Newsreader',serif;font-style:italic;font-weight:400;color:var(--acc2)}
+        .bento-grid{
+            display:grid;
+            grid-template-columns:repeat(3,1fr);
+            grid-template-rows:auto auto;
+            gap:1rem;
+        }
+        .bc{
+            background:var(--card);border:1px solid var(--border);border-radius:16px;
+            padding:2rem;transition:all .4s;overflow:hidden;position:relative;
+        }
+        .bc:hover{border-color:rgba(255,87,34,.2);transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.3)}
+        .bc.wide{grid-column:span 2}
+        .bc.tall{grid-row:span 2;display:flex;flex-direction:column;justify-content:space-between}
+        .bc .icon{font-size:2rem;margin-bottom:1.2rem}
+        .bc h3{font-size:1.1rem;font-weight:800;margin-bottom:.5rem;letter-spacing:-.3px}
+        .bc p{font-size:.85rem;color:var(--wd);line-height:1.7}
+        .bc .big-stat{
+            font-size:clamp(3rem,6vw,5rem);font-weight:900;color:var(--acc);
+            opacity:.1;position:absolute;bottom:.5rem;right:1rem;line-height:1;
+        }
+
+        /* ── MENU ── */
+        .menu-s{
+            padding:clamp(4rem,8vw,7rem) 2rem;
+            border-top:1px solid var(--border);
+        }
+        .menu-inner{max-width:1000px;margin:0 auto}
+        .menu-s .bento-label,.menu-s h2{text-align:center}
+        .menu-s h2{margin-bottom:3rem}
+        .mg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+        .mi{
+            background:var(--card);border:1px solid var(--border);border-radius:14px;
+            padding:1.8rem;text-align:center;transition:all .3s;
+        }
+        .mi:hover{border-color:rgba(255,87,34,.15);background:rgba(255,87,34,.03)}
+        .mi .me{font-size:2.5rem;margin-bottom:1rem;display:block}
+        .mi h4{font-size:.95rem;font-weight:800;margin-bottom:.4rem;letter-spacing:-.2px}
+        .mi p{font-size:.75rem;color:var(--wd);line-height:1.5}
+
+        /* ── REVIEWS ── */
+        .rev-s{padding:clamp(4rem,8vw,7rem) 2rem;border-top:1px solid var(--border);overflow:hidden}
+        .rev-s .bento-label,.rev-s h2{text-align:center}
+        .rev-s h2{margin-bottom:3rem}
+        .rev-scroll{display:flex;gap:1rem;animation:rs 30s linear infinite}
+        @keyframes rs{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+        .rc{
+            flex-shrink:0;width:360px;background:var(--card);border:1px solid var(--border);
+            border-radius:14px;padding:2rem;
+        }
+        .rc .stars{color:var(--acc);font-size:.75rem;letter-spacing:2px;margin-bottom:1rem}
+        .rc blockquote{font-size:.9rem;color:var(--wm);line-height:1.7;font-style:italic;margin-bottom:1.2rem;font-family:'Newsreader',serif}
+        .rc .who{font-size:.7rem;font-weight:700;color:var(--w)}
+        .rc .what{font-size:.6rem;color:var(--wd);margin-top:.15rem}
+
+        /* ── CTA ── */
+        .cta-s{
+            padding:clamp(5rem,10vw,8rem) 2rem;text-align:center;
+            border-top:1px solid var(--border);position:relative;
+        }
+        .cta-s::before{
+            content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+            width:min(80vw,500px);height:500px;
+            background:radial-gradient(ellipse,rgba(255,87,34,.06),transparent 70%);
+            pointer-events:none;
+        }
+        .cta-s .bento-label{text-align:center}
+        .cta-s h2{
+            font-size:clamp(2.5rem,5.5vw,4.5rem);font-weight:900;
+            letter-spacing:-2px;line-height:.95;margin-bottom:1.5rem;position:relative;
+        }
+        .cta-s h2 .em{font-family:'Newsreader',serif;font-style:italic;font-weight:400;color:var(--acc2)}
+        .cta-s>p{color:var(--wd);line-height:1.7;margin-bottom:2rem;max-width:450px;margin-left:auto;margin-right:auto;position:relative}
+        .cta-ph{
+            font-size:clamp(1.8rem,4.5vw,3rem);font-weight:900;color:var(--acc);
+            text-decoration:none;display:inline-block;margin-bottom:2rem;
+            letter-spacing:-1px;transition:.3s;position:relative;
+        }
+        .cta-ph:hover{color:var(--w)}
+        .cta-row{display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap;margin-bottom:2.5rem;position:relative}
+        .cta-pills{display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;position:relative}
+        .pill{
+            font-size:.6rem;color:var(--wd);text-transform:uppercase;letter-spacing:2px;
+            font-weight:600;padding:.4rem 1rem;border:1px solid var(--border);border-radius:100px;
+        }
+
+        /* ── FOOTER ── */
+        footer{
+            border-top:1px solid var(--border);padding:2rem;
+            display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;
+            max-width:1300px;margin:0 auto;
+        }
+        .fbr{font-size:.9rem;font-weight:900;letter-spacing:-.3px}
+        .fbr span{color:var(--acc)}
+        .fso{display:flex;gap:.5rem}
+        .fso a{
+            width:30px;height:30px;border-radius:8px;border:1px solid var(--border);
+            display:flex;align-items:center;justify-content:center;
+            color:var(--wd);text-decoration:none;font-size:.6rem;font-weight:700;transition:.3s;
+        }
+        .fso a:hover{background:var(--acc);border-color:var(--acc);color:#fff}
+        .fcp{width:100%;text-align:center;font-size:.55rem;color:rgba(255,255,255,.15);margin-top:.5rem;letter-spacing:1px;text-transform:uppercase}
+
+        /* ── MOBILE ── */
+        .mm{
+            display:none;position:fixed;inset:0;z-index:999;background:var(--bg);
+            flex-direction:column;align-items:center;justify-content:center;gap:2rem;
+        }
+        .mm.open{display:flex}
+        .mm a{font-size:1.8rem;font-weight:900;color:var(--w);text-decoration:none;letter-spacing:-1px}
+        .mm a:hover{color:var(--acc)}
+        .mm-x{position:absolute;top:1.2rem;right:1.5rem;background:none;border:none;color:var(--w);font-size:1.5rem;cursor:pointer}
+
+        /* ── REVEAL ── */
+        .rv{opacity:0;transform:translateY(20px);transition:opacity .5s,transform .5s cubic-bezier(.22,1,.36,1)}
+        .rv.v{opacity:1;transform:none}
+
+        @media(max-width:1000px){
+            .nv{display:none}.hm{display:block}
+            .hero-inner{grid-template-columns:1fr;text-align:center}
+            .hero-p{margin-left:auto;margin-right:auto}
+            .hero-acts{justify-content:center}
+            .hero-chips{justify-content:center}
+            .hero-right{max-width:350px;margin:0 auto}
+            .hero-float{display:none}
+            .bento-grid{grid-template-columns:1fr 1fr}
+            .bc.wide{grid-column:span 1}
+            .bc.tall{grid-row:span 1}
+            .mg{grid-template-columns:1fr 1fr}
+        }
+        @media(max-width:600px){
+            .bento-grid{grid-template-columns:1fr}
+            .mg{grid-template-columns:1fr}
+            .hero-acts,.cta-row{flex-direction:column;align-items:center}
+            .b{width:100%;max-width:280px;justify-content:center}
+            .trust-items{gap:1.5rem}
+            .cta-pills{flex-direction:column;align-items:center;gap:.6rem}
+        }
+    </style>
+</head>
+<body>
+
+<div class="grain"></div>
+
+<!-- NAV -->
+<nav id="nv">
+    <a href="#" class="logo">carmelo<span>'s</span></a>
+    <div class="nv">
+        <a href="#about">About</a>
+        <a href="#menu">Menu</a>
+        <a href="#reviews">Reviews</a>
+        <a href="tel:19738008926" class="cta">Book Event</a>
+    </div>
+    <button class="hm" onclick="document.getElementById('mm').classList.add('open')"><span></span><span></span><span></span></button>
+</nav>
+<div class="mm" id="mm">
+    <button class="mm-x" onclick="this.parentElement.classList.remove('open')">✕</button>
+    <a href="#about" onclick="this.parentElement.classList.remove('open')">About</a>
+    <a href="#menu" onclick="this.parentElement.classList.remove('open')">Menu</a>
+    <a href="#reviews" onclick="this.parentElement.classList.remove('open')">Reviews</a>
+    <a href="tel:19738008926" onclick="this.parentElement.classList.remove('open')">Book</a>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-grd"></div>
+    <div class="hero-inner">
+        <div class="hero-left rv">
+            <div class="hero-chips">
+                <div class="chip"><span class="dot g"></span> Available Now</div>
+                <div class="chip"><span class="dot o"></span> NJ & Tri-State</div>
+            </div>
+            <h1>Wood-fired pizza, <span class="em">delivered to your&nbsp;event.</span></h1>
+            <p class="hero-p">Authentic Neapolitan-style pizza from our 900°F mobile brick oven. San Marzano tomatoes, fresh mozzarella, handcrafted dough — cooked in 90 seconds.</p>
+            <div class="hero-acts">
+                <a href="tel:19738008926" class="b b1">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                    973-800-8926
+                </a>
+                <a href="mailto:carmelosoven@gmail.com" class="b b2">Email Us</a>
+            </div>
+        </div>
+        <div class="hero-right rv">
+            <div class="hero-3d">
+                <div class="orbit"><div class="orbit-dot d1"></div></div>
+                <div class="orbit"><div class="orbit-dot d2"></div></div>
+                <div class="orbit"><div class="orbit-dot d3"></div></div>
+                <div class="center-badge"><div class="t">900°</div><div class="u">brick oven</div></div>
+            </div>
+            <div class="hero-float f1"><span class="ic">⭐</span> 5.0 on Yelp</div>
+            <div class="hero-float f2"><span class="ic">🍕</span> 500+ events</div>
+            <div class="hero-float f3"><span class="ic">⏱️</span> 90s per pizza</div>
+        </div>
+    </div>
+</section>
+
+<!-- TRUST -->
+<div class="trust rv">
+    <p>Trusted for</p>
+    <div class="trust-items">
+        <span class="trust-item">Weddings</span>
+        <span class="trust-item">Corporate</span>
+        <span class="trust-item">Birthdays</span>
+        <span class="trust-item">Graduations</span>
+        <span class="trust-item">Block Parties</span>
+        <span class="trust-item">Fundraisers</span>
+    </div>
+</div>
+
+<!-- BENTO -->
+<section class="bento" id="about">
+    <div class="bento-label rv">Why Carmelo's</div>
+    <h2 class="rv">Not your average caterer.<br>Not even <span class="em">close.</span></h2>
+    <div class="bento-grid">
+        <div class="bc wide rv">
+            <div class="icon">🎨</div>
+            <h3>Custom Menus for Every Event</h3>
+            <p>We collaborate with you over the phone to design a menu tailored to your taste, budget, and style. Every event is personal — never cookie-cutter.</p>
+            <div class="big-stat">01</div>
+        </div>
+        <div class="bc tall rv">
+            <div>
+                <div class="icon">🔥</div>
+                <h3>Live Wood-Fired Cooking</h3>
+                <p>Your guests watch pizza made in real-time from our 900°F mobile brick oven. It's dinner and a show — the interactive experience everyone remembers.</p>
+            </div>
+            <div class="big-stat">02</div>
+        </div>
+        <div class="bc rv">
+            <div class="icon">🌿</div>
+            <h3>Premium Ingredients</h3>
+            <p>San Marzano tomatoes, fresh mozzarella, locally sourced produce, herb-infused EVOO, imported Italian essentials.</p>
+            <div class="big-stat">03</div>
+        </div>
+        <div class="bc rv">
+            <div class="icon">👨‍🍳</div>
+            <h3>Full-Service Team</h3>
+            <p>Professional chefs and servers handle everything — setup, cooking, serving, cleanup. You just enjoy your party.</p>
+            <div class="big-stat">04</div>
+        </div>
+        <div class="bc rv">
+            <div class="icon">🏢</div>
+            <h3>Corporate Ready</h3>
+            <p>Team lunches, client dinners, company milestones. Interactive catering that impresses.</p>
+            <div class="big-stat">05</div>
+        </div>
+        <div class="bc rv">
+            <div class="icon">💰</div>
+            <h3>Transparent Pricing</h3>
+            <p>Starting at $1,400 for up to 45 guests. No hidden fees. We work within your budget.</p>
+            <div class="big-stat">06</div>
+        </div>
+    </div>
+</section>
+
+<!-- MENU -->
+<section class="menu-s" id="menu">
+    <div class="menu-inner">
+        <div class="bento-label rv">The Menu</div>
+        <h2 class="rv" style="text-align:center;font-size:clamp(2rem,4vw,3rem);font-weight:900;letter-spacing:-1px;margin-bottom:3rem;line-height:1.1">Signature <span class="em">pizzas</span></h2>
+        <div class="mg">
+            <div class="mi rv"><span class="me">🍅</span><h4>Classic Margherita</h4><p>San Marzano sauce, fresh mozzarella, basil, EVOO</p></div>
+            <div class="mi rv"><span class="me">🧀</span><h4>White Truffle</h4><p>Ricotta, mozzarella, truffle oil, garlic, herbs</p></div>
+            <div class="mi rv"><span class="me">🥬</span><h4>Arugula & Fig</h4><p>White base, arugula, balsamic fig glaze, parmesan</p></div>
+            <div class="mi rv"><span class="me">🌶️</span><h4>Diavola</h4><p>Spicy sopressata, San Marzano, chili, mozzarella</p></div>
+            <div class="mi rv"><span class="me">🍄</span><h4>Wild Mushroom</h4><p>Mixed mushrooms, fontina, thyme, garlic oil</p></div>
+            <div class="mi rv"><span class="me">🫒</span><h4>Mediterranean</h4><p>Roasted peppers, olives, artichoke, feta, oregano</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- REVIEWS -->
+<section class="rev-s" id="reviews">
+    <div class="bento-label rv">Reviews</div>
+    <h2 class="rv" style="font-size:clamp(2rem,4vw,3rem);font-weight:900;letter-spacing:-1px;margin-bottom:3rem;line-height:1.1">What people <span class="em">say</span></h2>
+    <div class="rev-scroll">
+        <div class="rc"><div class="stars">★★★★★</div><blockquote>"Carmelo's was the highlight of our wedding. Guests couldn't stop raving about the pizza — better than any restaurant."</blockquote><div class="who">Sarah M.</div><div class="what">Wedding Reception</div></div>
+        <div class="rc"><div class="stars">★★★★★</div><blockquote>"We hired them for a corporate event and everyone was blown away. The live cooking was a massive hit with the team."</blockquote><div class="who">Jason R.</div><div class="what">Corporate Event</div></div>
+        <div class="rc"><div class="stars">★★★★★</div><blockquote>"Best pizza in New Jersey, hands down. The crust, sauce, fresh mozzarella — everything was absolutely perfect."</blockquote><div class="who">Maria L.</div><div class="what">Birthday Party</div></div>
+        <div class="rc"><div class="stars">★★★★★</div><blockquote>"Billy and the team were incredibly professional. Showed up early, served amazing food, and left the place spotless."</blockquote><div class="who">Tom D.</div><div class="what">Graduation Party</div></div>
+        <div class="rc"><div class="stars">★★★★★</div><blockquote>"Carmelo's was the highlight of our wedding. Guests couldn't stop raving about the pizza — better than any restaurant."</blockquote><div class="who">Sarah M.</div><div class="what">Wedding Reception</div></div>
+        <div class="rc"><div class="stars">★★★★★</div><blockquote>"We hired them for a corporate event and everyone was blown away. The live cooking was a massive hit with the team."</blockquote><div class="who">Jason R.</div><div class="what">Corporate Event</div></div>
+        <div class="rc"><div class="stars">★★★★★</div><blockquote>"Best pizza in New Jersey, hands down. The crust, sauce, fresh mozzarella — everything was absolutely perfect."</blockquote><div class="who">Maria L.</div><div class="what">Birthday Party</div></div>
+        <div class="rc"><div class="stars">★★★★★</div><blockquote>"Billy and the team were incredibly professional. Showed up early, served amazing food, and left the place spotless."</blockquote><div class="who">Tom D.</div><div class="what">Graduation Party</div></div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-s">
+    <div class="bento-label rv">Book Your Event</div>
+    <h2 class="rv">Ready to make it <span class="em">unforgettable?</span></h2>
+    <p class="rv">Weddings, corporate dinners, birthdays, backyard parties — we bring Naples to your door.</p>
+    <a href="tel:19738008926" class="cta-ph rv">973-800-8926</a><br>
+    <div class="cta-row rv">
+        <a href="mailto:carmelosoven@gmail.com" class="b b1">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            Email Us
+        </a>
+        <a href="https://www.carmelosbrickovenpizzas.com/rates" class="b b2" target="_blank">Get a Quote →</a>
+    </div>
+    <div class="cta-pills rv">
+        <span class="pill">New Jersey & Tri-State</span>
+        <span class="pill">From $1,400</span>
+        <span class="pill">45+ Guests</span>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <div class="fbr">carmelo<span>'s</span></div>
+    <div class="fso">
+        <a href="https://www.facebook.com/carmelosbrickovenpizza/" target="_blank">Fb</a>
+        <a href="https://www.instagram.com/carmelosoven/" target="_blank">Ig</a>
+        <a href="https://www.yelp.com/biz/carmelos-brick-oven-pizzas-kinnelon" target="_blank">Ye</a>
+    </div>
+    <div class="fcp">© 2026 Carmelo's Brick Oven Pizza — New Jersey's Finest Pizza Truck</div>
+</footer>
+
+<script>
+    // Nav
+    const nv=document.getElementById('nv');
+    window.addEventListener('scroll',()=>nv.classList.toggle('s',scrollY>60));
+
+    // Reveal
+    const io=new IntersectionObserver(entries=>{
+        entries.forEach((e,i)=>{
+            if(e.isIntersecting){setTimeout(()=>e.target.classList.add('v'),i*50);io.unobserve(e.target)}
+        });
+    },{threshold:.08});
+    document.querySelectorAll('.rv').forEach(el=>io.observe(el));
+
+    // Parallax orbits on mouse
+    const h3d=document.querySelector('.hero-3d');
+    if(h3d){
+        document.addEventListener('mousemove',e=>{
+            const cx=window.innerWidth/2, cy=window.innerHeight/2;
+            const dx=(e.clientX-cx)/cx, dy=(e.clientY-cy)/cy;
+            h3d.style.transform=`rotateY(${dx*8}deg) rotateX(${-dy*8}deg)`;
+        });
+    }
+</script>
+</body>
+</html>

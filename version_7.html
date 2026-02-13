@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carmelo's Brick Oven Pizza | We Bring the Pizzeria to You</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,700&family=Libre+Franklin:wght@300;400;500;600;700;900&display=swap');
+
+        :root{
+            --paper:#F8F5EE;
+            --ink:#1A1712;
+            --sepia:#8C7B6B;
+            --rule:rgba(26,23,18,.12);
+            --red:#B5342B;
+            --aged:#D4C9B8;
+        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        html{scroll-behavior:smooth}
+        body{font-family:'Libre Franklin',sans-serif;background:var(--paper);color:var(--ink);overflow-x:hidden}
+        ::selection{background:var(--red);color:#fff}
+
+        /* utils */
+        .container{max-width:1100px;margin:0 auto;padding:0 2rem}
+        .rule{border:none;border-top:1px solid var(--rule);margin:0}
+        .rule-thick{border-top:3px double var(--rule)}
+        .rule-red{border-top:3px solid var(--red)}
+
+        /* ── MASTHEAD ── */
+        .masthead{
+            padding:1rem 0 0;text-align:center;
+            border-bottom:3px double var(--rule);
+        }
+        .mast-top{
+            display:flex;justify-content:space-between;align-items:center;
+            padding:0 2rem .6rem;font-size:.55rem;color:var(--sepia);
+            letter-spacing:1px;text-transform:uppercase;font-weight:500;
+            border-bottom:1px solid var(--rule);max-width:1100px;margin:0 auto;
+        }
+        .mast-top a{color:var(--sepia);text-decoration:none;transition:.3s}
+        .mast-top a:hover{color:var(--red)}
+        .mast-title{
+            padding:1.2rem 2rem;
+        }
+        .mast-title h1{
+            font-family:'Cormorant Garamond',serif;font-size:clamp(2.5rem,6vw,4.5rem);
+            font-weight:700;letter-spacing:2px;line-height:1;
+            text-transform:uppercase;
+        }
+        .mast-title .sub{
+            font-family:'Cormorant Garamond',serif;font-style:italic;
+            font-size:clamp(.9rem,2vw,1.2rem);color:var(--sepia);
+            font-weight:300;margin-top:.3rem;letter-spacing:1px;
+        }
+        .mast-nav{
+            display:flex;justify-content:center;gap:2.5rem;
+            padding:.6rem 0;border-top:1px solid var(--rule);
+            max-width:1100px;margin:0 auto;
+        }
+        .mast-nav a{
+            font-size:.65rem;font-weight:600;letter-spacing:1.5px;
+            text-transform:uppercase;color:var(--ink);text-decoration:none;
+            transition:.3s;
+        }
+        .mast-nav a:hover{color:var(--red)}
+        .hm-btn{display:none;background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--ink)}
+
+        /* ── HEADLINE HERO ── */
+        .headline-hero{
+            padding:3rem 0;border-bottom:1px solid var(--rule);
+        }
+        .hh-grid{
+            display:grid;grid-template-columns:2fr 1fr;gap:2rem;
+            align-items:start;
+        }
+        .hh-main h2{
+            font-family:'Cormorant Garamond',serif;
+            font-size:clamp(2.5rem,5.5vw,4.5rem);
+            font-weight:700;line-height:1;letter-spacing:-1px;
+            margin-bottom:1rem;
+        }
+        .hh-main h2 em{font-style:italic;color:var(--red)}
+        .hh-byline{
+            font-size:.65rem;text-transform:uppercase;letter-spacing:1.5px;
+            color:var(--sepia);font-weight:600;margin-bottom:1.2rem;
+            display:flex;align-items:center;gap:1rem;
+        }
+        .hh-byline::after{content:'';flex:1;height:1px;background:var(--rule)}
+        .hh-lede{
+            font-family:'Cormorant Garamond',serif;font-size:1.35rem;
+            line-height:1.65;color:var(--ink);font-weight:400;
+            margin-bottom:1.5rem;
+        }
+        .hh-lede .drop{
+            font-size:3.5rem;float:left;line-height:.85;
+            margin-right:.4rem;margin-top:.15rem;font-weight:700;
+            color:var(--red);
+        }
+        .hh-body{
+            font-size:.9rem;color:var(--sepia);line-height:1.8;
+            column-count:2;column-gap:2rem;column-rule:1px solid var(--rule);
+        }
+        .hh-sidebar{
+            border-left:1px solid var(--rule);padding-left:2rem;
+        }
+        .hh-sidebar .sidebar-box{
+            border:1px solid var(--rule);padding:1.5rem;margin-bottom:1.5rem;
+            text-align:center;
+        }
+        .sidebar-box .sb-num{
+            font-family:'Cormorant Garamond',serif;font-size:3rem;
+            font-weight:700;color:var(--red);line-height:1;
+        }
+        .sidebar-box .sb-label{
+            font-size:.6rem;text-transform:uppercase;letter-spacing:2px;
+            color:var(--sepia);font-weight:600;margin-top:.3rem;
+        }
+        .sidebar-cta{
+            display:flex;flex-direction:column;gap:.6rem;margin-top:1.5rem;
+        }
+        .btn-news{
+            display:flex;align-items:center;justify-content:center;gap:.5rem;
+            padding:.8rem 1.5rem;font-size:.8rem;font-weight:600;
+            text-decoration:none;border:none;cursor:pointer;
+            transition:all .3s;letter-spacing:.5px;
+        }
+        .btn-news svg{width:14px;height:14px}
+        .btn-fill{background:var(--red);color:#fff;border:2px solid var(--red)}
+        .btn-fill:hover{background:var(--ink);border-color:var(--ink)}
+        .btn-line{background:none;color:var(--ink);border:2px solid var(--rule)}
+        .btn-line:hover{border-color:var(--ink)}
+
+        /* ── SECTION HEADER ── */
+        .sec-head{
+            padding:1.5rem 0 .8rem;border-bottom:1px solid var(--rule);
+            margin-bottom:1.5rem;display:flex;align-items:baseline;gap:1rem;
+        }
+        .sec-head h3{
+            font-family:'Cormorant Garamond',serif;font-size:1.6rem;
+            font-weight:700;text-transform:uppercase;letter-spacing:1px;
+            white-space:nowrap;
+        }
+        .sec-head::after{content:'';flex:1;height:1px;background:var(--rule)}
+
+        /* ── COLUMNS LAYOUT ── */
+        .cols-section{padding:2rem 0;border-bottom:1px solid var(--rule)}
+        .cols-3{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+        .col-item{
+            padding:1.2rem 1.5rem;
+            border-right:1px solid var(--rule);
+            transition:background .3s;
+        }
+        .col-item:last-child{border-right:none}
+        .col-item:hover{background:rgba(181,52,43,.02)}
+        .col-item .ci-num{
+            font-family:'Cormorant Garamond',serif;font-size:2rem;
+            font-weight:700;color:var(--aged);line-height:1;margin-bottom:.5rem;
+        }
+        .col-item h4{
+            font-family:'Cormorant Garamond',serif;font-size:1.15rem;
+            font-weight:700;margin-bottom:.5rem;
+        }
+        .col-item p{font-size:.8rem;color:var(--sepia);line-height:1.65}
+
+        /* ── MENU ── */
+        .menu-section{padding:2rem 0;border-bottom:1px solid var(--rule)}
+        .menu-2col{display:grid;grid-template-columns:1fr 1fr;gap:0}
+        .menu-entry{
+            display:flex;align-items:baseline;gap:.8rem;
+            padding:.8rem 1.2rem;
+            border-bottom:1px dotted var(--aged);
+            transition:background .3s;
+        }
+        .menu-entry:nth-child(odd){border-right:1px solid var(--rule)}
+        .menu-entry:hover{background:rgba(181,52,43,.02)}
+        .menu-entry .me-emoji{font-size:1.1rem;flex-shrink:0}
+        .menu-entry h4{
+            font-family:'Cormorant Garamond',serif;font-size:1rem;font-weight:700;
+            flex-shrink:0;
+        }
+        .menu-entry .dots{flex:1;border-bottom:1px dotted var(--aged);margin:0 .3rem;min-width:20px;align-self:center}
+        .menu-entry .me-desc{font-size:.72rem;color:var(--sepia);max-width:180px;text-align:right;line-height:1.4}
+
+        /* ── TESTIMONIALS ── */
+        .test-section{padding:2rem 0;border-bottom:1px solid var(--rule)}
+        .test-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+        .t-card{
+            padding:1.5rem;border-right:1px solid var(--rule);
+        }
+        .t-card:last-child{border-right:none}
+        .t-card .t-q{
+            font-family:'Cormorant Garamond',serif;font-size:3rem;
+            color:var(--red);opacity:.3;line-height:.5;margin-bottom:.8rem;
+        }
+        .t-card blockquote{
+            font-family:'Cormorant Garamond',serif;font-style:italic;
+            font-size:1rem;line-height:1.65;color:var(--ink);margin-bottom:1rem;
+        }
+        .t-card .t-who{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+        .t-card .t-evt{font-size:.6rem;color:var(--sepia)}
+
+        /* ── CLASSIFIED CTA ── */
+        .classified{
+            padding:3rem 0;text-align:center;
+        }
+        .classified-box{
+            max-width:600px;margin:0 auto;
+            border:3px double var(--rule);padding:2.5rem 3rem;
+            position:relative;
+        }
+        .classified-box::before{
+            content:'★ ADVERTISEMENT ★';position:absolute;top:-.6rem;left:50%;
+            transform:translateX(-50%);background:var(--paper);padding:0 1rem;
+            font-size:.5rem;letter-spacing:4px;color:var(--sepia);font-weight:700;
+        }
+        .classified-box h3{
+            font-family:'Cormorant Garamond',serif;font-size:clamp(1.8rem,3.5vw,2.8rem);
+            font-weight:700;line-height:1.1;margin-bottom:.8rem;
+        }
+        .classified-box h3 em{font-style:italic;color:var(--red)}
+        .classified-box p{font-size:.9rem;color:var(--sepia);line-height:1.7;margin-bottom:1.5rem}
+        .classified-phone{
+            font-family:'Cormorant Garamond',serif;font-size:clamp(1.5rem,3vw,2.2rem);
+            font-weight:700;color:var(--red);text-decoration:none;
+            display:inline-block;margin-bottom:1.5rem;
+            border-bottom:2px solid transparent;transition:.3s;
+        }
+        .classified-phone:hover{border-bottom-color:var(--red)}
+        .classified-btns{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;margin-bottom:1.5rem}
+        .classified-meta{display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap}
+        .classified-meta span{
+            font-size:.55rem;text-transform:uppercase;letter-spacing:2px;
+            color:var(--sepia);font-weight:600;
+        }
+
+        /* ── FOOTER ── */
+        footer{
+            border-top:3px double var(--rule);padding:1.5rem 0;text-align:center;
+        }
+        .foot-inner{max-width:1100px;margin:0 auto;padding:0 2rem}
+        .foot-row{
+            display:flex;justify-content:space-between;align-items:center;
+            flex-wrap:wrap;gap:1rem;margin-bottom:.8rem;
+        }
+        .foot-brand{
+            font-family:'Cormorant Garamond',serif;font-size:1rem;font-weight:700;
+            letter-spacing:1px;text-transform:uppercase;
+        }
+        .foot-social{display:flex;gap:.5rem}
+        .foot-social a{
+            width:28px;height:28px;border:1px solid var(--rule);
+            display:flex;align-items:center;justify-content:center;
+            color:var(--sepia);text-decoration:none;font-size:.55rem;font-weight:700;
+            transition:.3s;
+        }
+        .foot-social a:hover{background:var(--red);color:#fff;border-color:var(--red)}
+        .foot-copy{font-size:.55rem;color:var(--sepia);letter-spacing:1px}
+
+        /* ── MOBILE ── */
+        .mob{
+            display:none;position:fixed;inset:0;z-index:999;background:var(--paper);
+            flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;
+        }
+        .mob.open{display:flex}
+        .mob a{
+            font-family:'Cormorant Garamond',serif;font-size:2rem;
+            font-weight:700;color:var(--ink);text-decoration:none;
+            text-transform:uppercase;letter-spacing:2px;
+        }
+        .mob a:hover{color:var(--red)}
+        .mob-x{position:absolute;top:1rem;right:1.5rem;background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--ink)}
+
+        /* ── REVEAL ── */
+        .rv{opacity:0;transform:translateY(15px);transition:opacity .5s,transform .5s}
+        .rv.v{opacity:1;transform:none}
+
+        /* ── RESPONSIVE ── */
+        @media(max-width:900px){
+            .mast-nav{display:none}
+            .hm-btn{display:block}
+            .hh-grid{grid-template-columns:1fr}
+            .hh-body{column-count:1}
+            .hh-sidebar{border-left:none;padding-left:0;border-top:1px solid var(--rule);padding-top:1.5rem;margin-top:1rem}
+            .cols-3{grid-template-columns:1fr}
+            .col-item{border-right:none;border-bottom:1px solid var(--rule)}
+            .col-item:last-child{border-bottom:none}
+            .menu-2col{grid-template-columns:1fr}
+            .menu-entry{border-right:none!important}
+            .test-grid{grid-template-columns:1fr}
+            .t-card{border-right:none;border-bottom:1px solid var(--rule)}
+            .t-card:last-child{border-bottom:none}
+        }
+        @media(max-width:600px){
+            .mast-top{flex-direction:column;gap:.3rem;text-align:center}
+            .classified-box{padding:2rem 1.5rem}
+            .classified-btns{flex-direction:column;align-items:center}
+            .btn-news{width:100%;max-width:260px}
+            .classified-meta{flex-direction:column;gap:.5rem}
+            .sidebar-cta{flex-direction:column}
+            .btn-news{justify-content:center}
+        }
+    </style>
+</head>
+<body>
+
+<div class="mob" id="mm">
+    <button class="mob-x" onclick="this.parentElement.classList.remove('open')">✕</button>
+    <a href="#story" onclick="this.parentElement.classList.remove('open')">Story</a>
+    <a href="#services" onclick="this.parentElement.classList.remove('open')">Services</a>
+    <a href="#menu" onclick="this.parentElement.classList.remove('open')">Menu</a>
+    <a href="#reviews" onclick="this.parentElement.classList.remove('open')">Reviews</a>
+    <a href="tel:19738008926" onclick="this.parentElement.classList.remove('open')">Book</a>
+</div>
+
+<!-- MASTHEAD -->
+<header class="masthead">
+    <div class="mast-top">
+        <span>Est. New Jersey</span>
+        <span>Mobile Brick Oven Pizza Catering</span>
+        <div style="display:flex;align-items:center;gap:1rem">
+            <a href="tel:19738008926">973-800-8926</a>
+            <button class="hm-btn" onclick="document.getElementById('mm').classList.add('open')">☰</button>
+        </div>
+    </div>
+    <div class="mast-title">
+        <h1>Carmelo's Brick Oven</h1>
+        <div class="sub">New Jersey's Finest Mobile Pizza Truck · Wood-Fired Neapolitan Style</div>
+    </div>
+    <nav class="mast-nav">
+        <a href="#story">The Story</a>
+        <a href="#services">Services</a>
+        <a href="#menu">The Menu</a>
+        <a href="#reviews">Reviews</a>
+        <a href="#book">Book an Event</a>
+    </nav>
+</header>
+
+<!-- HEADLINE HERO -->
+<section class="headline-hero">
+    <div class="container">
+        <div class="hh-grid rv">
+            <div class="hh-main" id="story">
+                <h2>We Bring <em>Naples</em> to Your&nbsp;Doorstep</h2>
+                <div class="hh-byline">By Billy Yago · Carmelo's Brick Oven Pizza</div>
+                <p class="hh-lede">
+                    <span class="drop">Y</span>ou've had pizza a thousand times before. But unless you've walked the cobblestone streets of Naples — the birthplace of pizza — you've never experienced the kind of wood-fired, thin-crust perfection that Carmelo's serves from our mobile brick oven.
+                </p>
+                <div class="hh-body">
+                    Our oven reaches 900 degrees Fahrenheit, producing a blistered, charred crust with that unmistakable smoky depth in just 90 seconds. We use San Marzano tomatoes imported from the volcanic soil of Mount Vesuvius, fresh mozzarella pulled daily, herb-infused extra virgin olive oil, and dough that's been perfected through years of craft. We don't do bland banquet hall food. We don't do generic. Every event we cater gets the full Carmelo's experience — custom menus designed around your taste and budget, professional chefs and servers, and an interactive cooking show that your guests will talk about for years. From weddings to corporate events, graduations to backyard parties, we bring the full pizzeria experience directly to your location anywhere in New Jersey and the tri-state area.
+                </div>
+            </div>
+            <div class="hh-sidebar">
+                <div class="sidebar-box">
+                    <div class="sb-num">900°</div>
+                    <div class="sb-label">Brick Oven Temperature</div>
+                </div>
+                <div class="sidebar-box">
+                    <div class="sb-num">500+</div>
+                    <div class="sb-label">Events Catered</div>
+                </div>
+                <div class="sidebar-box">
+                    <div class="sb-num">90s</div>
+                    <div class="sb-label">Per Pizza</div>
+                </div>
+                <div class="sidebar-cta">
+                    <a href="tel:19738008926" class="btn-news btn-fill">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+                        Call Now
+                    </a>
+                    <a href="mailto:carmelosoven@gmail.com" class="btn-news btn-line">Email Us</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SERVICES -->
+<section class="cols-section" id="services">
+    <div class="container">
+        <div class="sec-head rv"><h3>Services</h3></div>
+        <div class="cols-3">
+            <div class="col-item rv"><div class="ci-num">I.</div><h4>Custom Menus</h4><p>Every menu tailored to your taste, budget, and vision. We collaborate over the phone to build the perfect lineup for your event.</p></div>
+            <div class="col-item rv"><div class="ci-num">II.</div><h4>Live Wood-Fired Cooking</h4><p>Guests watch pizza made fresh from our 900°F mobile oven. It's dinner and a show — the interactive experience everyone remembers.</p></div>
+            <div class="col-item rv"><div class="ci-num">III.</div><h4>Premium Ingredients</h4><p>San Marzano tomatoes, fresh mozzarella, locally sourced produce, herb-infused olive oil, and imported Italian essentials.</p></div>
+        </div>
+        <div class="cols-3" style="border-top:1px solid var(--rule)">
+            <div class="col-item rv"><div class="ci-num">IV.</div><h4>Full-Service Team</h4><p>Professional chefs and servers handle setup, cooking, serving, and cleanup. You just enjoy the party.</p></div>
+            <div class="col-item rv"><div class="ci-num">V.</div><h4>Corporate Catering</h4><p>Team lunches, client dinners, company milestones. Interactive wood-fired catering that impresses every time.</p></div>
+            <div class="col-item rv"><div class="ci-num">VI.</div><h4>Transparent Pricing</h4><p>Starting at $1,400 for up to 45 guests. No hidden fees. We always work within your budget.</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- MENU -->
+<section class="menu-section" id="menu">
+    <div class="container">
+        <div class="sec-head rv"><h3>The Menu</h3></div>
+        <div class="menu-2col">
+            <div class="menu-entry rv"><span class="me-emoji">🍅</span><h4>Classic Margherita</h4><span class="dots"></span><span class="me-desc">San Marzano, fresh mozz, basil, EVOO</span></div>
+            <div class="menu-entry rv"><span class="me-emoji">🧀</span><h4>White Truffle</h4><span class="dots"></span><span class="me-desc">Ricotta, mozz, truffle oil, garlic, herbs</span></div>
+            <div class="menu-entry rv"><span class="me-emoji">🥬</span><h4>Arugula & Fig</h4><span class="dots"></span><span class="me-desc">White base, arugula, fig glaze, parmesan</span></div>
+            <div class="menu-entry rv"><span class="me-emoji">🌶️</span><h4>Diavola</h4><span class="dots"></span><span class="me-desc">Sopressata, San Marzano, chili, mozz</span></div>
+            <div class="menu-entry rv"><span class="me-emoji">🍄</span><h4>Wild Mushroom</h4><span class="dots"></span><span class="me-desc">Mixed mushrooms, fontina, thyme, garlic</span></div>
+            <div class="menu-entry rv"><span class="me-emoji">🫒</span><h4>Mediterranean</h4><span class="dots"></span><span class="me-desc">Peppers, olives, artichoke, feta, oregano</span></div>
+        </div>
+        <p class="rv" style="text-align:center;font-family:'Cormorant Garamond',serif;font-style:italic;color:var(--sepia);margin-top:1.5rem;font-size:.95rem">Every menu is fully customizable — let's design yours together.</p>
+    </div>
+</section>
+
+<!-- REVIEWS -->
+<section class="test-section" id="reviews">
+    <div class="container">
+        <div class="sec-head rv"><h3>Testimonials</h3></div>
+        <div class="test-grid">
+            <div class="t-card rv">
+                <div class="t-q">"</div>
+                <blockquote>Carmelo's was the highlight of our wedding. Guests could not stop talking about the pizza — it was better than any restaurant I've been to in my life.</blockquote>
+                <div class="t-who">Sarah M.</div><div class="t-evt">Wedding Reception</div>
+            </div>
+            <div class="t-card rv">
+                <div class="t-q">"</div>
+                <blockquote>We hired them for a corporate event and everyone was blown away. The interactive experience of watching pizza made live was an absolute hit.</blockquote>
+                <div class="t-who">Jason R.</div><div class="t-evt">Corporate Event</div>
+            </div>
+            <div class="t-card rv">
+                <div class="t-q">"</div>
+                <blockquote>Billy and the team were incredibly professional. They showed up early, served incredible food, and left the place spotless. Couldn't ask for more.</blockquote>
+                <div class="t-who">Tom D.</div><div class="t-evt">Graduation Party</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CLASSIFIED CTA -->
+<section class="classified" id="book">
+    <div class="container">
+        <div class="classified-box rv">
+            <h3>Book Your <em>Next Event</em></h3>
+            <p>Whether it's a wedding, corporate dinner, birthday, or backyard party — we bring the full Naples experience to your door.</p>
+            <a href="tel:19738008926" class="classified-phone">973-800-8926</a><br>
+            <div class="classified-btns">
+                <a href="mailto:carmelosoven@gmail.com" class="btn-news btn-fill">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    Email Us
+                </a>
+                <a href="https://www.carmelosbrickovenpizzas.com/rates" class="btn-news btn-line" target="_blank">Request a Quote</a>
+            </div>
+            <div class="classified-meta">
+                <span>New Jersey & Tri-State</span>
+                <span>From $1,400</span>
+                <span>45+ Guests</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <div class="foot-inner">
+        <div class="foot-row">
+            <div class="foot-brand">Carmelo's Brick Oven</div>
+            <div class="foot-social">
+                <a href="https://www.facebook.com/carmelosbrickovenpizza/" target="_blank">Fb</a>
+                <a href="https://www.instagram.com/carmelosoven/" target="_blank">Ig</a>
+                <a href="https://www.yelp.com/biz/carmelos-brick-oven-pizzas-kinnelon" target="_blank">Ye</a>
+            </div>
+        </div>
+        <div class="foot-copy">© 2026 Carmelo's Brick Oven Pizza · New Jersey's Finest Pizza Truck · All Rights Reserved</div>
+    </div>
+</footer>
+
+<script>
+    const io=new IntersectionObserver(entries=>{
+        entries.forEach((e,i)=>{
+            if(e.isIntersecting){setTimeout(()=>e.target.classList.add('v'),i*40);io.unobserve(e.target)}
+        });
+    },{threshold:.08});
+    document.querySelectorAll('.rv').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>
