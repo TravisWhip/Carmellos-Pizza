@@ -754,7 +754,7 @@
                 angle: Math.random() * Math.PI * 2,
                 rotSpeed: (Math.random() - 0.5) * 0.015,
                 // Appearance
-                opacity: isSpark ? Math.random() * 0.5 + 0.4 : Math.random() * 0.7 + 0.3,
+                opacity: isSpark ? Math.random() * 0.3 + 0.2 : Math.random() * 0.4 + 0.15,
                 // Flicker: multiple overlapping sine waves for irregular pulsing
                 flicker1: { speed: Math.random() * 0.04 + 0.01, offset: Math.random() * Math.PI * 2, amp: 0.2 },
                 flicker2: { speed: Math.random() * 0.09 + 0.03, offset: Math.random() * Math.PI * 2, amp: 0.15 },
@@ -762,7 +762,7 @@
                 // Color: starts hot (yellow-white), cools to deep red as it rises
                 startHue: Math.random() * 15 + 25,   // 25-40 (orange-yellow)
                 endHue: Math.random() * 10,            // 0-10 (deep red)
-                startLight: Math.random() * 15 + 60,  // 60-75% (bright)
+                startLight: Math.random() * 10 + 45,  // 45-55% (dimmer)
                 endLight: Math.random() * 10 + 20,    // 20-30% (dim ember)
                 startSat: 100,
                 endSat: Math.random() * 20 + 80,
@@ -787,8 +787,8 @@
                 e.swirl3.phase += e.swirl3.speed;
                 const nx = noise(e.turbSeed + f * e.turbScale, e.y * 0.01);
                 const sw = Math.sin(e.swirl1.phase) * e.swirl1.amp
-                         + Math.sin(e.swirl2.phase) * e.swirl2.amp
-                         + Math.sin(e.swirl3.phase) * e.swirl3.amp;
+                    + Math.sin(e.swirl2.phase) * e.swirl2.amp
+                    + Math.sin(e.swirl3.phase) * e.swirl3.amp;
                 const accel = 1 + (1 - e.y / canvas.height) * 0.15;
                 e.y -= e.speedY * accel;
                 e.x += e.baseSpeedX + (nx - 0.5) * e.turbStrength + sw;
@@ -818,8 +818,8 @@
                 e.swirl2.phase += e.swirl2.speed;
                 e.swirl3.phase += e.swirl3.speed;
                 const swirl = Math.sin(e.swirl1.phase) * e.swirl1.amp
-                            + Math.sin(e.swirl2.phase) * e.swirl2.amp
-                            + Math.sin(e.swirl3.phase) * e.swirl3.amp;
+                    + Math.sin(e.swirl2.phase) * e.swirl2.amp
+                    + Math.sin(e.swirl3.phase) * e.swirl3.amp;
                 e.speedX = e.baseSpeedX + (nx - 0.5) * e.turbStrength + swirl;
 
                 // Slight upward acceleration (hot air rises faster)
@@ -873,12 +873,13 @@
                 ctx.translate(e.x, e.y);
                 ctx.rotate(e.angle);
 
-                // Outer glow
-                const glowR = Math.max(e.w, e.h) * 5;
+                // Outer glow (large soft radius)
+                const glowR = Math.max(e.w, e.h) * 12;
                 const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, glowR);
-                glow.addColorStop(0, `hsla(${hue}, ${sat}%, ${light}%, ${alpha * 0.5})`);
-                glow.addColorStop(0.25, `hsla(${hue - 5}, ${sat}%, ${light * 0.7}%, ${alpha * 0.2})`);
-                glow.addColorStop(1, `hsla(${hue - 10}, ${sat * 0.8}%, ${light * 0.4}%, 0)`);
+                glow.addColorStop(0, `hsla(${hue}, ${sat}%, ${light}%, ${alpha * 0.35})`);
+                glow.addColorStop(0.15, `hsla(${hue - 5}, ${sat}%, ${light * 0.7}%, ${alpha * 0.15})`);
+                glow.addColorStop(0.5, `hsla(${hue - 8}, ${sat * 0.8}%, ${light * 0.5}%, ${alpha * 0.05})`);
+                glow.addColorStop(1, `hsla(${hue - 10}, ${sat * 0.7}%, ${light * 0.3}%, 0)`);
                 ctx.beginPath();
                 ctx.ellipse(0, 0, glowR, glowR * 0.8, 0, 0, Math.PI * 2);
                 ctx.fillStyle = glow;
@@ -886,8 +887,8 @@
 
                 // Ember body (irregular ellipse, not a perfect circle)
                 const bodyGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, e.w);
-                bodyGrad.addColorStop(0, `hsla(${hue + 8}, 100%, ${Math.min(light + 20, 90)}%, ${alpha * 0.95})`);
-                bodyGrad.addColorStop(0.5, `hsla(${hue}, ${sat}%, ${light}%, ${alpha * 0.7})`);
+                bodyGrad.addColorStop(0, `hsla(${hue + 8}, 100%, ${Math.min(light + 10, 70)}%, ${alpha * 0.7})`);
+                bodyGrad.addColorStop(0.5, `hsla(${hue}, ${sat}%, ${light}%, ${alpha * 0.45})`);
                 bodyGrad.addColorStop(1, `hsla(${hue - 8}, ${sat * 0.9}%, ${light * 0.5}%, ${alpha * 0.1})`);
                 ctx.beginPath();
                 ctx.ellipse(0, 0, e.w, e.h, 0, 0, Math.PI * 2);
@@ -900,7 +901,7 @@
                 const coreSize = Math.min(e.w, e.h) * 0.35;
                 ctx.beginPath();
                 ctx.arc(coreOffX, coreOffY, coreSize, 0, Math.PI * 2);
-                ctx.fillStyle = `hsla(${hue + 15}, 100%, ${Math.min(light + 30, 95)}%, ${alpha * 0.85})`;
+                ctx.fillStyle = `hsla(${hue + 15}, 100%, ${Math.min(light + 15, 70)}%, ${alpha * 0.6})`;
                 ctx.fill();
 
                 ctx.restore();
