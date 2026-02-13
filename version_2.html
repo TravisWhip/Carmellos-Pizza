@@ -727,6 +727,26 @@
         resize();
         window.addEventListener('resize', resize);
 
+        // Mouse tracking for ember repulsion
+        let mouseX = -9999, mouseY = -9999;
+        let mouseMoving = false;
+        let mouseStopTimer = null;
+        const MOUSE_RADIUS = 120;
+        const MOUSE_FORCE = 6;
+        hero.addEventListener('mousemove', (ev) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = ev.clientX - rect.left;
+            mouseY = ev.clientY - rect.top;
+            mouseMoving = true;
+            clearTimeout(mouseStopTimer);
+            mouseStopTimer = setTimeout(() => { mouseMoving = false; }, 50);
+        });
+        hero.addEventListener('mouseleave', () => {
+            mouseX = -9999;
+            mouseY = -9999;
+            mouseMoving = false;
+        });
+
         // Simplex-like noise for organic turbulence
         function noise(x, y) {
             const s = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
@@ -738,6 +758,7 @@
             return {
                 x: Math.random() * canvas.width,
                 y: canvas.height + Math.random() * 60,
+                vx: 0, vy: 0, // velocity from mouse push
                 // Irregular shape: width vs height ratio
                 w: isSpark ? Math.random() * 1.5 + 0.5 : Math.random() * 2.5 + 1.5,
                 h: isSpark ? Math.random() * 1 + 0.3 : Math.random() * 1.5 + 0.8,
@@ -825,10 +846,27 @@
                     + Math.sin(e.swirl3.phase) * e.swirl3.amp;
                 e.speedX = e.baseSpeedX + (nx - 0.5) * e.turbStrength + swirl;
 
+                // Mouse repulsion
+                const dx = e.x - mouseX;
+                const dy = e.y - mouseY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (mouseMoving && dist < MOUSE_RADIUS && dist > 0) {
+                    // Cubic falloff: embers very close get pushed much harder
+                    const proximity = 1 - dist / MOUSE_RADIUS;
+                    const force = proximity * proximity * proximity * MOUSE_FORCE;
+                    e.vx += (dx / dist) * force;
+                    e.vy += (dy / dist) * force;
+                }
+                // Slow damping for more inertia / carry
+                e.vx *= 0.97;
+                e.vy *= 0.97;
+
                 // Slight upward acceleration (hot air rises faster)
                 const accel = 1 + (1 - e.y / canvas.height) * 0.15;
                 e.y -= e.speedY * accel;
                 e.x += e.speedX;
+                e.x += e.vx;
+                e.y += e.vy;
                 e.angle += e.rotSpeed;
 
                 // Life ratios
