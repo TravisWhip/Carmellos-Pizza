@@ -722,16 +722,16 @@
         const hero = canvas.parentElement;
         let embers = [];
         const FAST_EMBERS = true;
-        const EMBER_DENSITY = 100000 / (1920 * 1080);
+        const EMBER_DENSITY = 1000 / (1920 * 1080);
         const REF_HEIGHT = 1080;
-        const MAX_EMBERS = 10000;
+        const MAX_EMBERS = 5000;
 
         // ── Adaptive performance ──
-        const TARGET_FPS = 55;       // scale up if above this
+        const TARGET_FPS = 30;       // scale up if above this
         const MIN_FPS = 40;          // scale down if below this
         const SAMPLE_WINDOW = 60;    // frames to average over
-        const RAMP_UP_RATE = 0.05;   // add 5% of target per cycle
-        const RAMP_DOWN_RATE = 0.15; // remove 15% per cycle (react faster to drops)
+        const RAMP_UP_RATE = 0.2;   // add 5% of target per cycle
+        const RAMP_DOWN_RATE = 0.25; // remove 15% per cycle (react faster to drops)
         const MIN_EMBERS = 50;       // never go below this
         let adaptiveTarget = 0;      // 0 means use full density (set after first resize)
         let frameTimes = [];
@@ -937,6 +937,7 @@
                 embers.push(e);
             }
             if (embers.length > target) embers.length = target;
+            console.log(`Ember count: ${target}/${MAX_EMBERS}`);
         }
         // Defer first resize until layout is complete so canvas gets real dimensions
         requestAnimationFrame(() => resize());
@@ -954,6 +955,11 @@
             const rect = canvas.getBoundingClientRect();
             mouseX = ev.clientX - rect.left;
             mouseY = ev.clientY - rect.top;
+            if (!mouseMoving) {
+                // Fresh start — no vector from previous position
+                framePrevMX = mouseX;
+                framePrevMY = mouseY;
+            }
             mouseMoving = true;
             clearTimeout(mouseStopTimer);
             mouseStopTimer = setTimeout(() => { mouseMoving = false; }, 50);
@@ -1068,6 +1074,9 @@
                 frameVY = 0;
             }
 
+            // Scale size down when there are more embers (baseline = 200)
+            const sizeScale = Math.pow(200 / Math.max(embers.length, 50), 0.3);
+
             time++;
             let count = 0;
 
@@ -1169,7 +1178,7 @@
                 const ci = count * 4;
                 posArr[count * 2]     = e.x;
                 posArr[count * 2 + 1] = e.y;
-                sizeArr[count]        = glowR * 1.4;  // smaller point diameter
+                sizeArr[count]        = 3;//Math.min(3, Math.max(3, glowR * 1.4 * sizeScale));//1.4 * sizeScale;
 
                 glowColorArr[ci]     = gr;
                 glowColorArr[ci + 1] = gg;
