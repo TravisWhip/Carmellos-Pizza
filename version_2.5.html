@@ -709,7 +709,7 @@
         if (glow) glow.style.transform = `translateX(-50%) translateY(${window.scrollY * 0.15}px)`;
     });
 
-    // ── BURNING EMBERS (WebGL) ──
+    // ── BURNING EMBERS (Full GPU Simulation via Ping-Pong Textures) ──
     (function() {
         const canvas = document.getElementById('embersCanvas');
         const gl = canvas.getContext('webgl', {
@@ -719,35 +719,32 @@
         });
         if (!gl) { console.warn('WebGL not available'); return; }
 
-        const hero = canvas.parentElement;
-        let embers = [];
-        const FAST_EMBERS = true;
-        const EMBER_DENSITY = 1000 / (1920 * 1080);
-        const REF_HEIGHT = 1080;
-        const MAX_EMBERS = 5000;
-
-        // ── Adaptive performance ──
-        const TARGET_FPS = 30;       // scale up if above this
-        const MIN_FPS = 40;          // scale down if below this
-        const SAMPLE_WINDOW = 60;    // frames to average over
-        const RAMP_UP_RATE = 0.2;   // add 5% of target per cycle
-        const RAMP_DOWN_RATE = 0.25; // remove 15% per cycle (react faster to drops)
-        const MIN_EMBERS = 50;       // never go below this
-        let adaptiveTarget = 0;      // 0 means use full density (set after first resize)
-        let frameTimes = [];
-        let lastFrameTime = 0;
-
-
-        let emberCount, speedScale, driftScale;
-
-        function calcScreenParams() {
-            emberCount = Math.round(canvas.width * canvas.height * EMBER_DENSITY);
-            emberCount = Math.min(emberCount, MAX_EMBERS);
-            speedScale = (canvas.height / REF_HEIGHT) * (FAST_EMBERS ? 2 : 1);
-            driftScale = (canvas.width / 1920) * (FAST_EMBERS ? 10 : 1);
+        // Required extensions for GPU simulation
+        const extFloat = gl.getExtension('OES_texture_float');
+        gl.getExtension('OES_texture_float_linear');
+        gl.getExtension('WEBGL_color_buffer_float');
+        if (!extFloat) { console.warn('Float textures not supported'); return; }
+        if (gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS) < 1) {
+            console.warn('Vertex texture lookup not supported'); return;
         }
 
-        // ── WebGL Shader Setup ──
+        const hero = canvas.parentElement;
+        const NUM_EMBERS = 2000;
+        const STATE_ROWS = 11;
+        // State texture layout (width=NUM_EMBERS, height=STATE_ROWS):
+        // Row 0:  x, y, vx, vy
+        // Row 1:  w, h, speedY, baseSpeedX
+        // Row 2:  turbSeed, turbScale, turbStrength, angle
+        // Row 3:  swirl1Phase, swirl1Speed, swirl1Amp, rotSpeed
+        // Row 4:  swirl2Phase, swirl2Speed, swirl2Amp, opacity
+        // Row 5:  swirl3Phase, swirl3Speed, swirl3Amp, isSpark
+        // Row 6:  flicker1Speed, flicker1Offset, flicker1Amp, life
+        // Row 7:  flicker2Speed, flicker2Offset, flicker2Amp, maxLife
+        // Row 8:  flicker3Speed, flicker3Offset, flicker3Amp, 0
+        // Row 9:  startHue, endHue, startLight, endLight
+        // Row 10: startSat, endSat, prevX, prevY
+
+        // ── Shader helpers ──
         function compile(type, src) {
             const s = gl.createShader(type);
             gl.shaderSource(s, src);
@@ -766,32 +763,295 @@
             return p;
         }
 
-        // Ember point sprite program
-        // Matches the Canvas2D 3-layer look: outer glow, body, hot core
-        const emberProg = linkProg(
+        // ══════════════════════════════════════════════════
+        // SIMULATION PROGRAM — updates state texture via FBO
+        // ══════════════════════════════════════════════════
+        const simProg = linkProg(
             compile(gl.VERTEX_SHADER, `
                 attribute vec2 a_pos;
-                attribute float a_size;
-                attribute vec4 a_glowColor;   // rgb + alpha for outer glow
-                attribute vec4 a_bodyColor;   // rgb + alpha for ember body
-                attribute vec4 a_coreColor;   // rgb + alpha for hot core
-                attribute float a_bodyRatio;  // body radius / glow radius
-                attribute float a_coreRatio;  // core radius / glow radius
-                uniform vec2 u_res;
+                void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
+            `),
+            compile(gl.FRAGMENT_SHADER, `
+                precision highp float;
+                uniform sampler2D u_state;
+                uniform vec2 u_stateSize;
+                uniform vec2 u_canvasSize;
+                uniform float u_time;
+                uniform float u_speedScale;
+                uniform float u_driftScale;
+                uniform vec2 u_mousePos;
+                uniform vec2 u_mousePrev;
+                uniform float u_mouseMoving;
+                uniform vec2 u_clickPos;
+                uniform float u_clickActive;
+
+                const float MOUSE_RADIUS = 200.0;
+                const float MOUSE_FORCE = 0.06;
+                const float CLICK_RADIUS = 300.0;
+                const float CLICK_FORCE = 8.0;
+
+                vec4 rs(float idx, float row) {
+                    return texture2D(u_state, vec2((idx + 0.5) / u_stateSize.x, (row + 0.5) / u_stateSize.y));
+                }
+
+                float hash21(vec2 p) {
+                    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+                    p3 += dot(p3, p3.yzx + 33.33);
+                    return fract((p3.x + p3.y) * p3.z);
+                }
+
+                float rand(float id, float ch) {
+                    return hash21(vec2(id * 17.23 + ch * 31.71, u_time * 0.731 + ch * 7.13));
+                }
+
+                float noise(float x, float y) {
+                    return fract(sin(x * 12.9898 + y * 78.233) * 43758.5453);
+                }
+
+                void main() {
+                    vec2 coord = floor(gl_FragCoord.xy);
+                    float idx = coord.x;
+                    float row = coord.y;
+                    vec4 cur = rs(idx, row);
+
+                    // Check recycle condition
+                    vec4 r0 = rs(idx, 0.0);
+                    float life = rs(idx, 6.0).a;
+                    float maxLife = rs(idx, 7.0).a;
+                    bool dead = life > maxLife || r0.g < -30.0;
+
+                    if (dead) {
+                        // ── RECYCLE ──
+                        float isSpark = rand(idx, 0.0) < 0.3 ? 1.0 : 0.0;
+
+                        if (row < 0.5) {
+                            gl_FragColor = vec4(
+                                rand(idx, 1.0) * u_canvasSize.x,
+                                u_canvasSize.y + rand(idx, 2.0) * 60.0,
+                                0.0, 0.0);
+                        } else if (row < 1.5) {
+                            float w = isSpark > 0.5 ? rand(idx,3.0)*1.5+0.5 : rand(idx,3.0)*2.5+1.5;
+                            float h = isSpark > 0.5 ? rand(idx,4.0)*1.0+0.3 : rand(idx,4.0)*1.5+0.8;
+                            float spY = (isSpark > 0.5 ? rand(idx,5.0)*0.8+0.3 : rand(idx,5.0)*0.7+0.4) * u_speedScale;
+                            float bsX = (rand(idx,6.0) - 0.5) * 0.25 * u_driftScale;
+                            gl_FragColor = vec4(w, h, spY, bsX);
+                        } else if (row < 2.5) {
+                            gl_FragColor = vec4(rand(idx,7.0)*1000.0, rand(idx,8.0)*0.002+0.001,
+                                rand(idx,9.0)*0.8+0.3, rand(idx,10.0)*6.283);
+                        } else if (row < 3.5) {
+                            gl_FragColor = vec4(rand(idx,11.0)*6.283, rand(idx,12.0)*0.018+0.005,
+                                rand(idx,13.0)*0.4+0.15, (rand(idx,14.0)-0.5)*0.015);
+                        } else if (row < 4.5) {
+                            float op = isSpark > 0.5 ? rand(idx,18.0)*0.3+0.2 : rand(idx,18.0)*0.4+0.15;
+                            gl_FragColor = vec4(rand(idx,15.0)*6.283, rand(idx,16.0)*0.04+0.02,
+                                rand(idx,17.0)*0.25+0.1, op);
+                        } else if (row < 5.5) {
+                            gl_FragColor = vec4(rand(idx,19.0)*6.283, rand(idx,20.0)*0.08+0.04,
+                                rand(idx,21.0)*0.15+0.05, isSpark);
+                        } else if (row < 6.5) {
+                            gl_FragColor = vec4(rand(idx,22.0)*0.04+0.01, rand(idx,23.0)*6.283, 0.2, 0.0);
+                        } else if (row < 7.5) {
+                            float ml = isSpark > 0.5 ? rand(idx,26.0)*300.0+150.0 : rand(idx,26.0)*800.0+500.0;
+                            gl_FragColor = vec4(rand(idx,24.0)*0.09+0.03, rand(idx,25.0)*6.283, 0.15, ml);
+                        } else if (row < 8.5) {
+                            gl_FragColor = vec4(rand(idx,27.0)*0.2+0.05, rand(idx,28.0)*6.283, 0.1, 0.0);
+                        } else if (row < 9.5) {
+                            gl_FragColor = vec4(rand(idx,29.0)*15.0+25.0, rand(idx,30.0)*10.0,
+                                rand(idx,31.0)*10.0+45.0, rand(idx,32.0)*10.0+20.0);
+                        } else {
+                            gl_FragColor = vec4(100.0, rand(idx,33.0)*20.0+80.0,
+                                rand(idx,1.0)*u_canvasSize.x, u_canvasSize.y + rand(idx,2.0)*60.0);
+                        }
+                    } else {
+                        // ── NORMAL UPDATE ──
+                        if (row < 0.5) {
+                            // Position & velocity
+                            vec4 r1 = rs(idx, 1.0);
+                            vec4 r2 = rs(idx, 2.0);
+                            vec4 r3 = rs(idx, 3.0);
+                            vec4 r4 = rs(idx, 4.0);
+                            vec4 r5 = rs(idx, 5.0);
+
+                            float x = r0.r, y = r0.g, vx = r0.b, vy = r0.a;
+                            float speedY = r1.b, baseSpeedX = r1.a;
+                            float turbSeed = r2.r, turbScale = r2.g, turbStrength = r2.b;
+
+                            float nx = noise(turbSeed + u_time * turbScale, y * 0.01);
+                            float swirl = sin(r3.r) * r3.b + sin(r4.r) * r4.b + sin(r5.r) * r5.b;
+                            float speedX = baseSpeedX + (nx - 0.5) * turbStrength + swirl;
+
+                            // Mouse repulsion
+                            vec2 mVec = u_mousePos - u_mousePrev;
+                            float mSpeed = length(mVec);
+                            if (u_mouseMoving > 0.5 && mSpeed > 0.5) {
+                                float segLenSq = dot(mVec, mVec);
+                                float t = dot(vec2(x, y) - u_mousePrev, mVec) / segLenSq;
+                                t = clamp(t, 0.0, 1.0);
+                                vec2 closest = u_mousePrev + t * mVec;
+                                vec2 perp = vec2(x, y) - closest;
+                                float perpDist = length(perp);
+                                if (perpDist < MOUSE_RADIUS && perpDist > 0.0) {
+                                    float prox = 1.0 - perpDist / MOUSE_RADIUS;
+                                    float force = prox * prox * prox * MOUSE_FORCE * mSpeed;
+                                    vec2 mDir = mVec / mSpeed;
+                                    vec2 pDir = perp / perpDist;
+                                    vx += (mDir.x * 0.75 + pDir.x * 0.25) * force;
+                                    vy += (mDir.y * 0.75 + pDir.y * 0.25) * force;
+                                }
+                            }
+
+                            // Click explosion
+                            if (u_clickActive > 0.5) {
+                                vec2 cd = vec2(x, y) - u_clickPos;
+                                float cDist = length(cd);
+                                if (cDist < CLICK_RADIUS && cDist > 0.0) {
+                                    float t = cDist / CLICK_RADIUS;
+                                    float falloff = (1.0 - t) * (1.0 - t);
+                                    vx += (cd.x / cDist) * falloff * CLICK_FORCE;
+                                    vy += (cd.y / cDist) * falloff * CLICK_FORCE;
+                                }
+                            }
+
+                            vx *= 0.97; vy *= 0.97;
+                            float accel = 1.0 + (1.0 - y / u_canvasSize.y) * 0.15;
+                            y -= speedY * accel;
+                            x += speedX + vx;
+                            y += vy;
+
+                            gl_FragColor = vec4(x, y, vx, vy);
+
+                        } else if (row < 1.5) {
+                            gl_FragColor = cur; // immutable
+                        } else if (row < 2.5) {
+                            // angle += rotSpeed
+                            float rotSpeed = rs(idx, 3.0).a;
+                            gl_FragColor = vec4(cur.rgb, cur.a + rotSpeed);
+                        } else if (row < 3.5) {
+                            // swirl1 phase += speed
+                            gl_FragColor = vec4(cur.r + cur.g, cur.gba);
+                        } else if (row < 4.5) {
+                            // swirl2 phase += speed
+                            gl_FragColor = vec4(cur.r + cur.g, cur.gba);
+                        } else if (row < 5.5) {
+                            // swirl3 phase += speed
+                            gl_FragColor = vec4(cur.r + cur.g, cur.gba);
+                        } else if (row < 6.5) {
+                            // life += 1
+                            gl_FragColor = vec4(cur.rgb, cur.a + 1.0);
+                        } else if (row < 7.5) {
+                            gl_FragColor = cur; // immutable
+                        } else if (row < 8.5) {
+                            gl_FragColor = cur; // immutable
+                        } else if (row < 9.5) {
+                            gl_FragColor = cur; // immutable
+                        } else {
+                            // prevX, prevY = current position (before this frame's update)
+                            gl_FragColor = vec4(cur.rg, r0.rg);
+                        }
+                    }
+                }
+            `)
+        );
+        const simLoc = {
+            pos: gl.getAttribLocation(simProg, 'a_pos'),
+            state: gl.getUniformLocation(simProg, 'u_state'),
+            stateSize: gl.getUniformLocation(simProg, 'u_stateSize'),
+            canvasSize: gl.getUniformLocation(simProg, 'u_canvasSize'),
+            time: gl.getUniformLocation(simProg, 'u_time'),
+            speedScale: gl.getUniformLocation(simProg, 'u_speedScale'),
+            driftScale: gl.getUniformLocation(simProg, 'u_driftScale'),
+            mousePos: gl.getUniformLocation(simProg, 'u_mousePos'),
+            mousePrev: gl.getUniformLocation(simProg, 'u_mousePrev'),
+            mouseMoving: gl.getUniformLocation(simProg, 'u_mouseMoving'),
+            clickPos: gl.getUniformLocation(simProg, 'u_clickPos'),
+            clickActive: gl.getUniformLocation(simProg, 'u_clickActive')
+        };
+
+        // ══════════════════════════════════════════════════
+        // RENDER PROGRAM — reads state texture, draws point sprites
+        // ══════════════════════════════════════════════════
+        const renderProg = linkProg(
+            compile(gl.VERTEX_SHADER, `
+                attribute float a_index;
+                uniform sampler2D u_state;
+                uniform vec2 u_stateSize;
+                uniform vec2 u_canvasSize;
+
                 varying vec4 v_glowColor;
                 varying vec4 v_bodyColor;
                 varying vec4 v_coreColor;
                 varying float v_bodyRatio;
                 varying float v_coreRatio;
+
+                vec4 rs(float idx, float row) {
+                    return texture2D(u_state, vec2((idx + 0.5) / u_stateSize.x, (row + 0.5) / u_stateSize.y));
+                }
+
+                float hue2rgb(float p, float q, float t) {
+                    if (t < 0.0) t += 1.0;
+                    if (t > 1.0) t -= 1.0;
+                    if (t < 1.0/6.0) return p + (q - p) * 6.0 * t;
+                    if (t < 1.0/2.0) return q;
+                    if (t < 2.0/3.0) return p + (q - p) * (2.0/3.0 - t) * 6.0;
+                    return p;
+                }
+
+                vec3 hsl2rgb(float h, float s, float l) {
+                    h /= 360.0; s /= 100.0; l /= 100.0;
+                    if (s < 0.001) return vec3(l);
+                    float q = l < 0.5 ? l * (1.0 + s) : l + s - l * s;
+                    float p = 2.0 * l - q;
+                    return vec3(hue2rgb(p,q,h+1.0/3.0), hue2rgb(p,q,h), hue2rgb(p,q,h-1.0/3.0));
+                }
+
                 void main() {
-                    vec2 clip = (a_pos / u_res) * 2.0 - 1.0;
+                    vec4 r0 = rs(a_index, 0.0);
+                    vec4 r1 = rs(a_index, 1.0);
+                    vec4 r4 = rs(a_index, 4.0);
+                    vec4 r6 = rs(a_index, 6.0);
+                    vec4 r7 = rs(a_index, 7.0);
+                    vec4 r8 = rs(a_index, 8.0);
+                    vec4 r9 = rs(a_index, 9.0);
+                    vec4 r10 = rs(a_index, 10.0);
+
+                    float x = r0.r, y = r0.g;
+                    float w = r1.r, h = r1.g;
+                    float opacity = r4.a;
+                    float life = r6.a;
+                    float maxLife = r7.a;
+
+                    float lifeRatio = life / maxLife;
+                    float fadeIn = min(life / 40.0, 1.0);
+                    float fadeOut = lifeRatio > 0.6 ? 1.0 - ((lifeRatio - 0.6) / 0.4) : 1.0;
+
+                    // Flicker: amp * sin(life * speed + offset)
+                    float f1 = r6.b * sin(life * r6.r + r6.g);
+                    float f2 = r7.b * sin(life * r7.r + r7.g);
+                    float f3 = r8.b * sin(life * r8.r + r8.g);
+                    float flicker = max(0.3, 1.0 + f1 + f2 + f3);
+
+                    float alpha = opacity * fadeIn * fadeOut * flicker;
+
+                    // Color cooling
+                    float coolRatio = pow(lifeRatio, 0.7);
+                    float hue = r9.r + (r9.g - r9.r) * coolRatio;
+                    float sat = r10.r + (r10.g - r10.r) * coolRatio;
+                    float light = r9.b + (r9.a - r9.b) * coolRatio;
+
+                    float glowR = max(w, h);
+                    vec3 gc = hsl2rgb(hue, sat, light);
+                    vec3 bc = hsl2rgb(hue + 8.0, 100.0, min(light + 10.0, 70.0));
+                    vec3 cc = hsl2rgb(hue + 15.0, 100.0, min(light + 15.0, 70.0));
+
+                    v_glowColor = vec4(gc, alpha * 0.55);
+                    v_bodyColor = vec4(bc, alpha * 0.9);
+                    v_coreColor = vec4(cc, alpha * 0.85);
+                    v_bodyRatio = w / glowR;
+                    v_coreRatio = (min(w, h) * 0.35) / glowR;
+
+                    vec2 clip = (vec2(x, y) / u_canvasSize) * 2.0 - 1.0;
                     gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
-                    gl_PointSize = a_size;
-                    v_glowColor = a_glowColor;
-                    v_bodyColor = a_bodyColor;
-                    v_coreColor = a_coreColor;
-                    v_bodyRatio = a_bodyRatio;
-                    v_coreRatio = a_coreRatio;
+                    gl_PointSize = 3.0;
                 }
             `),
             compile(gl.FRAGMENT_SHADER, `
@@ -805,12 +1065,10 @@
                     float d = length(gl_PointCoord - 0.5) * 2.0;
                     if (d > 1.0) discard;
 
-                    // Layer 1: Outer glow — tighter falloff, less diffuse
                     float glowA;
                     vec3 glowC = v_glowColor.rgb;
                     if (d < 0.1) {
                         glowA = v_glowColor.a;
-                        glowC = v_glowColor.rgb;
                     } else if (d < 0.35) {
                         glowA = mix(v_glowColor.a, v_glowColor.a * 0.2, (d - 0.1) / 0.25);
                         glowC = mix(v_glowColor.rgb, v_glowColor.rgb * 0.7, (d - 0.1) / 0.25);
@@ -819,7 +1077,6 @@
                         glowC = v_glowColor.rgb * 0.4;
                     }
 
-                    // Layer 2: Body — smaller radial gradient
                     float bd = d / v_bodyRatio;
                     float bodyA = 0.0;
                     vec3 bodyC = v_bodyColor.rgb;
@@ -833,24 +1090,28 @@
                         }
                     }
 
-                    // Layer 3: Core — small bright dot
                     float cd = d / v_coreRatio;
                     float coreA = 0.0;
                     if (cd < 1.0) {
                         coreA = v_coreColor.a * (1.0 - cd * cd);
                     }
 
-                    // Additive composite of all 3 layers (matches Canvas2D lighter blend)
                     vec3 col = glowC * glowA + bodyC * bodyA + v_coreColor.rgb * coreA;
                     float a = min(glowA + bodyA + coreA, 1.0);
-
-                    // Premultiplied alpha output
                     gl_FragColor = vec4(col, a);
                 }
             `)
         );
+        const renderLoc = {
+            index: gl.getAttribLocation(renderProg, 'a_index'),
+            state: gl.getUniformLocation(renderProg, 'u_state'),
+            stateSize: gl.getUniformLocation(renderProg, 'u_stateSize'),
+            canvasSize: gl.getUniformLocation(renderProg, 'u_canvasSize')
+        };
 
-        // Fade quad program (for motion blur / trail effect)
+        // ══════════════════════════════════════════════════
+        // FADE PROGRAM — trail/smoke effect
+        // ══════════════════════════════════════════════════
         const fadeProg = linkProg(
             compile(gl.VERTEX_SHADER, `
                 attribute vec2 a_pos;
@@ -861,400 +1122,242 @@
                 void main() { gl_FragColor = vec4(0.0, 0.0, 0.0, 0.15); }
             `)
         );
-        const fLoc = {
-            pos: gl.getAttribLocation(fadeProg, 'a_pos')
-        };
+        const fadeLoc = { pos: gl.getAttribLocation(fadeProg, 'a_pos') };
+
+        // ── Shared fullscreen quad buffer ──
         const quadBuf = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
 
-        // Locations
-        const eLoc = {
-            pos:       gl.getAttribLocation(emberProg, 'a_pos'),
-            size:      gl.getAttribLocation(emberProg, 'a_size'),
-            glowColor: gl.getAttribLocation(emberProg, 'a_glowColor'),
-            bodyColor: gl.getAttribLocation(emberProg, 'a_bodyColor'),
-            coreColor: gl.getAttribLocation(emberProg, 'a_coreColor'),
-            bodyRatio: gl.getAttribLocation(emberProg, 'a_bodyRatio'),
-            coreRatio: gl.getAttribLocation(emberProg, 'a_coreRatio'),
-            res:       gl.getUniformLocation(emberProg, 'u_res')
-        };
+        // ── Ember index buffer for render pass ──
+        const indexBuf = gl.createBuffer();
+        const indexData = new Float32Array(NUM_EMBERS);
+        for (let i = 0; i < NUM_EMBERS; i++) indexData[i] = i;
+        gl.bindBuffer(gl.ARRAY_BUFFER, indexBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, indexData, gl.STATIC_DRAW);
 
-        // GPU buffers & typed arrays — 14 floats per ember:
-        // pos(2) + size(1) + glowColor(4) + bodyColor(4) + coreColor(4) + bodyRatio(1) + coreRatio(1)
-        const posBuf       = gl.createBuffer();
-        const sizeBuf      = gl.createBuffer();
-        const glowColorBuf = gl.createBuffer();
-        const bodyColorBuf = gl.createBuffer();
-        const coreColorBuf = gl.createBuffer();
-        const bodyRatioBuf = gl.createBuffer();
-        const coreRatioBuf = gl.createBuffer();
-        const posArr       = new Float32Array(MAX_EMBERS * 2);
-        const sizeArr      = new Float32Array(MAX_EMBERS);
-        const glowColorArr = new Float32Array(MAX_EMBERS * 4);
-        const bodyColorArr = new Float32Array(MAX_EMBERS * 4);
-        const coreColorArr = new Float32Array(MAX_EMBERS * 4);
-        const bodyRatioArr = new Float32Array(MAX_EMBERS);
-        const coreRatioArr = new Float32Array(MAX_EMBERS);
-
-        // HSL → RGB
-        function hsl2rgb(h, s, l) {
-            h /= 360; s /= 100; l /= 100;
-            if (s === 0) return [l, l, l];
-            const hue2rgb = (p, q, t) => {
-                if (t < 0) t++; if (t > 1) t--;
-                if (t < 1/6) return p + (q - p) * 6 * t;
-                if (t < 1/2) return q;
-                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-                return p;
-            };
-            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-            const p = 2 * l - q;
-            return [hue2rgb(p, q, h + 1/3), hue2rgb(p, q, h), hue2rgb(p, q, h - 1/3)];
+        // ── State texture helpers ──
+        function createStateTex(data) {
+            const tex = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, tex);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, NUM_EMBERS, STATE_ROWS, 0, gl.RGBA, gl.FLOAT, data);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            return tex;
         }
-
-        // ── Resize ──
-        function resize() {
-            canvas.width = hero.offsetWidth;
-            canvas.height = hero.offsetHeight;
-            gl.viewport(0, 0, canvas.width, canvas.height);
-            calcScreenParams();
-            // On first resize, start at 40% of full density for a quick ramp-up test
-            if (adaptiveTarget === 0) {
-                adaptiveTarget = Math.max(MIN_EMBERS, Math.round(emberCount * 0.4));
-            } else {
-                // On window resize, clamp adaptive target to new full density
-                adaptiveTarget = Math.max(MIN_EMBERS, Math.min(emberCount, adaptiveTarget));
+        function createFBO(tex) {
+            const fbo = gl.createFramebuffer();
+            gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+            const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+            if (status !== gl.FRAMEBUFFER_COMPLETE) {
+                console.error('FBO incomplete:', status);
             }
-            applyEmberCount(adaptiveTarget);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            return fbo;
         }
 
-        function applyEmberCount(target) {
-            target = Math.max(MIN_EMBERS, Math.min(MAX_EMBERS, target));
-            while (embers.length < target) {
-                const e = createEmber();
-                preSimEmber(e);
-                embers.push(e);
+        // ── Initialize state data on CPU (one-time) ──
+        function initStateData(cW, cH) {
+            const REF_HEIGHT = 1080;
+            const spdScale = (cH / REF_HEIGHT) * 2.0;
+            const drfScale = (cW / 1920) * 10.0;
+            const data = new Float32Array(NUM_EMBERS * STATE_ROWS * 4);
+
+            function setRow(i, row, r, g, b, a) {
+                const idx = (row * NUM_EMBERS + i) * 4;
+                data[idx] = r; data[idx+1] = g; data[idx+2] = b; data[idx+3] = a;
             }
-            if (embers.length > target) embers.length = target;
-            console.log(`Ember count: ${target}/${MAX_EMBERS}`);
-        }
-        // Defer first resize until layout is complete so canvas gets real dimensions
-        requestAnimationFrame(() => resize());
-        window.addEventListener('resize', resize);
 
-        // ── Mouse tracking with per-frame velocity ──
+            for (let i = 0; i < NUM_EMBERS; i++) {
+                const isSpark = Math.random() < 0.3;
+                const w = isSpark ? Math.random()*1.5+0.5 : Math.random()*2.5+1.5;
+                const h = isSpark ? Math.random()*1.0+0.3 : Math.random()*1.5+0.8;
+                const speedY = (isSpark ? Math.random()*0.8+0.3 : Math.random()*0.7+0.4) * spdScale;
+                const baseSpeedX = (Math.random()-0.5) * 0.25 * drfScale;
+                const maxLife = isSpark ? Math.random()*300+150 : Math.random()*800+500;
+                const life = Math.random() * maxLife * 0.85;
+                const x = Math.random() * cW;
+                const y = cH - (life / maxLife) * cH * 1.2; // approximate vertical distribution
+
+                // State texture layout (width=NUM_EMBERS, height=STATE_ROWS):
+
+                // Row 0:  x, y, vx, vy
+                setRow(i, 0, x, y, 0, 0);
+                // Row 1:  w, h, speedY, baseSpeedX
+                setRow(i, 1, w, h, speedY, baseSpeedX);
+                // Row 2:  trbSeed, turbScale, turbStrength, angle
+                setRow(i, 2, Math.random()*1000, Math.random()*0.002+0.001, Math.random()*0.8+0.3, Math.random()*Math.PI*2);
+                // Row 3:  swirl1Phase, swirl1Speed, swirl1Amp, rotSpeed
+                setRow(i, 3, Math.random()*Math.PI*2, Math.random()*0.018+0.005, Math.random()*0.4+0.15, (Math.random()-0.5)*0.015);
+                // Row 4:  swirl2Phase, swirl2Speed, swirl2Amp, opacity
+                setRow(i, 4, Math.random()*Math.PI*2, Math.random()*0.04+0.02, Math.random()*0.25+0.1, isSpark ? Math.random()*0.3+0.2 : Math.random()*0.4+0.15);
+                // Row 5:  swirl3Phase, swirl3Speed, swirl3Amp, isSpark
+                setRow(i, 5, Math.random()*Math.PI*2, Math.random()*0.08+0.04, Math.random()*0.15+0.05, isSpark ? 1.0 : 0.0);
+                // Row 6:  flicker1Speed, flicker1Offset, flicker1Amp, life
+                setRow(i, 6, Math.random()*0.04+0.01, Math.random()*Math.PI*2, 0.2, life);
+                // Row 7:  flicker2Speed, flicker2Offset, flicker2Amp, maxLife
+                setRow(i, 7, Math.random()*0.09+0.03, Math.random()*Math.PI*2, 0.15, maxLife);
+                // Row 8:  flicker3Speed, flicker3Offset, flicker3Amp, 0
+                setRow(i, 8, Math.random()*0.2+0.05, Math.random()*Math.PI*2, 0.1, 0);
+                // Row 9:  startHue, endHue, startLight, endLight
+                setRow(i, 9, Math.random()*15+25, Math.random()*10, Math.random()*10+45, Math.random()*10+20);
+                // Row 10: startSat, endSat, prevX, prevY
+                setRow(i, 10, 100, Math.random()*20+80, x, y);
+            }
+            return data;
+        }
+
+        // ── Ping-pong state ──
+        let texA, texB, fboA, fboB;
+        let readTex, writeTex, writeFBO;
+
+        function initTextures(cW, cH) {
+            if (texA) { gl.deleteTexture(texA); gl.deleteTexture(texB); gl.deleteFramebuffer(fboA); gl.deleteFramebuffer(fboB); }
+            const data = initStateData(cW, cH);
+            texA = createStateTex(data);
+            texB = createStateTex(null);
+            fboA = createFBO(texA);
+            fboB = createFBO(texB);
+            readTex = texA; writeTex = texB; writeFBO = fboB;
+        }
+
+        // ── Mouse tracking ──
         let mouseX = -9999, mouseY = -9999;
-        let framePrevMX = -9999, framePrevMY = -9999;
-        let frameVX = 0, frameVY = 0;
-        let mouseMoving = false;
-        let mouseStopTimer = null;
-        const MOUSE_RADIUS = 200;
-        const MOUSE_FORCE = 0.06;
+        let prevMX = -9999, prevMY = -9999;
+        let mouseMoving = false, mouseStopTimer = null;
+        let clickX = -9999, clickY = -9999, clickActive = false;
+
         hero.addEventListener('mousemove', (ev) => {
             const rect = canvas.getBoundingClientRect();
             mouseX = ev.clientX - rect.left;
             mouseY = ev.clientY - rect.top;
-            if (!mouseMoving) {
-                // Fresh start — no vector from previous position
-                framePrevMX = mouseX;
-                framePrevMY = mouseY;
-            }
+            if (!mouseMoving) { prevMX = mouseX; prevMY = mouseY; }
             mouseMoving = true;
             clearTimeout(mouseStopTimer);
             mouseStopTimer = setTimeout(() => { mouseMoving = false; }, 50);
         });
-        // ── Click explosion ──
-        let clickX = -9999, clickY = -9999;
-        let clickActive = false;
-        const CLICK_RADIUS = 300;
-        const CLICK_FORCE = 8;
         hero.addEventListener('click', (ev) => {
             const rect = canvas.getBoundingClientRect();
             clickX = ev.clientX - rect.left;
             clickY = ev.clientY - rect.top;
             clickActive = true;
         });
-
         hero.addEventListener('mouseleave', () => {
             mouseX = -9999; mouseY = -9999;
-            framePrevMX = -9999; framePrevMY = -9999;
+            prevMX = -9999; prevMY = -9999;
             mouseMoving = false;
         });
 
-        // ── Noise ──
-        function noise(x, y) {
-            const s = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
-            return s - Math.floor(s);
+        // ── Resize ──
+        let canvasW, canvasH, speedScale, driftScale;
+        function resize() {
+            canvas.width = hero.offsetWidth;
+            canvas.height = hero.offsetHeight;
+            canvasW = canvas.width;
+            canvasH = canvas.height;
+            speedScale = (canvasH / 1080) * 2.0;
+            driftScale = (canvasW / 1920) * 10.0;
         }
 
-        // ── Ember creation (identical simulation data) ──
-        function createEmber() {
-            const isSpark = Math.random() < 0.3;
-            return {
-                x: Math.random() * canvas.width,
-                y: canvas.height + Math.random() * 60,
-                vx: 0, vy: 0,
-                w: isSpark ? Math.random() * 1.5 + 0.5 : Math.random() * 2.5 + 1.5,
-                h: isSpark ? Math.random() * 1 + 0.3 : Math.random() * 1.5 + 0.8,
-                speedY: (isSpark ? Math.random() * 0.8 + 0.3 : Math.random() * 0.7 + 0.4) * speedScale,
-                speedX: 0,
-                baseSpeedX: (Math.random() - 0.5) * 0.25 * driftScale,
-                turbSeed: Math.random() * 1000,
-                turbScale: Math.random() * 0.002 + 0.001,
-                turbStrength: Math.random() * 0.8 + 0.3,
-                swirl1: { phase: Math.random() * Math.PI * 2, speed: Math.random() * 0.018 + 0.005, amp: Math.random() * 0.4 + 0.15 },
-                swirl2: { phase: Math.random() * Math.PI * 2, speed: Math.random() * 0.04 + 0.02, amp: Math.random() * 0.25 + 0.1 },
-                swirl3: { phase: Math.random() * Math.PI * 2, speed: Math.random() * 0.08 + 0.04, amp: Math.random() * 0.15 + 0.05 },
-                angle: Math.random() * Math.PI * 2,
-                rotSpeed: (Math.random() - 0.5) * 0.015,
-                opacity: isSpark ? Math.random() * 0.3 + 0.2 : Math.random() * 0.4 + 0.15,
-                flicker1: { speed: Math.random() * 0.04 + 0.01, offset: Math.random() * Math.PI * 2, amp: 0.2 },
-                flicker2: { speed: Math.random() * 0.09 + 0.03, offset: Math.random() * Math.PI * 2, amp: 0.15 },
-                flicker3: { speed: Math.random() * 0.2 + 0.05, offset: Math.random() * Math.PI * 2, amp: 0.1 },
-                startHue: Math.random() * 15 + 25,
-                endHue: Math.random() * 10,
-                startLight: Math.random() * 10 + 45,
-                endLight: Math.random() * 10 + 20,
-                startSat: 100,
-                endSat: Math.random() * 20 + 80,
-                isSpark: isSpark,
-                life: 0,
-                maxLife: isSpark ? Math.random() * 300 + 150 : Math.random() * 800 + 500
-            };
-        }
-
-        function preSimEmber(e) {
-            const simFrames = Math.random() * e.maxLife * 0.85 | 0;
-            for (let f = 0; f < simFrames; f++) {
-                e.life++;
-                e.swirl1.phase += e.swirl1.speed;
-                e.swirl2.phase += e.swirl2.speed;
-                e.swirl3.phase += e.swirl3.speed;
-                const nx = noise(e.turbSeed + f * e.turbScale, e.y * 0.01);
-                const sw = Math.sin(e.swirl1.phase) * e.swirl1.amp
-                    + Math.sin(e.swirl2.phase) * e.swirl2.amp
-                    + Math.sin(e.swirl3.phase) * e.swirl3.amp;
-                const accel = 1 + (1 - e.y / canvas.height) * 0.15;
-                e.y -= e.speedY * accel;
-                e.x += e.baseSpeedX + (nx - 0.5) * e.turbStrength + sw;
-                e.angle += e.rotSpeed;
-            }
-        }
-
-        // ── GL state init ──
-        gl.clearColor(0, 0, 0, 0);
-        gl.enable(gl.BLEND);
-
+        // ── Init & start ──
         let time = 0;
+        let started = false;
+
+        requestAnimationFrame(() => {
+            resize();
+            initTextures(canvasW, canvasH);
+            gl.clearColor(0, 0, 0, 0);
+            gl.enable(gl.BLEND);
+            started = true;
+            animate();
+        });
+
+        window.addEventListener('resize', () => {
+            resize();
+            // State textures persist — embers adapt via canvasSize uniform
+        });
 
         function animate() {
-            // Fade previous frame for trail/smoke effect
+            if (!started) return;
+
+            // ── 1. FADE PASS (to screen) ──
+            gl.viewport(0, 0, canvasW, canvasH);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             gl.useProgram(fadeProg);
-            // Color: fade by 0.85. Alpha: also fade WITHOUT adding new alpha
             gl.blendFuncSeparate(
-                gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA,  // color
-                gl.ZERO, gl.ONE_MINUS_SRC_ALPHA         // alpha: dst_alpha * 0.85
+                gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA,
+                gl.ZERO, gl.ONE_MINUS_SRC_ALPHA
             );
             gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
-            gl.enableVertexAttribArray(fLoc.pos);
-            gl.vertexAttribPointer(fLoc.pos, 2, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(fadeLoc.pos);
+            gl.vertexAttribPointer(fadeLoc.pos, 2, gl.FLOAT, false, 0, 0);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-            gl.disableVertexAttribArray(fLoc.pos);
+            gl.disableVertexAttribArray(fadeLoc.pos);
 
-            // Switch to additive blending for embers
-            gl.blendFunc(gl.ONE, gl.ONE);
-
-            // Compute per-frame mouse velocity (prev frame pos → current pos)
-            if (mouseMoving && framePrevMX > -9000) {
-                frameVX = mouseX - framePrevMX;
-                frameVY = mouseY - framePrevMY;
-            } else {
-                frameVX = 0;
-                frameVY = 0;
-            }
-
-            // Scale size down when there are more embers (baseline = 200)
-            const sizeScale = Math.pow(200 / Math.max(embers.length, 50), 0.3);
-
+            // ── 2. SIMULATION PASS (to FBO) ──
             time++;
-            let count = 0;
+            gl.viewport(0, 0, NUM_EMBERS, STATE_ROWS);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, writeFBO);
+            gl.useProgram(simProg);
+            gl.disable(gl.BLEND); // no blending for simulation
 
-            for (let i = embers.length - 1; i >= 0; i--) {
-                const e = embers[i];
-                e.life++;
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, readTex);
+            gl.uniform1i(simLoc.state, 0);
+            gl.uniform2f(simLoc.stateSize, NUM_EMBERS, STATE_ROWS);
+            gl.uniform2f(simLoc.canvasSize, canvasW, canvasH);
+            gl.uniform1f(simLoc.time, time);
+            gl.uniform1f(simLoc.speedScale, speedScale);
+            gl.uniform1f(simLoc.driftScale, driftScale);
+            gl.uniform2f(simLoc.mousePos, mouseX, mouseY);
+            gl.uniform2f(simLoc.mousePrev, prevMX, prevMY);
+            gl.uniform1f(simLoc.mouseMoving, mouseMoving ? 1.0 : 0.0);
+            gl.uniform2f(simLoc.clickPos, clickX, clickY);
+            gl.uniform1f(simLoc.clickActive, clickActive ? 1.0 : 0.0);
 
-                // Turbulent movement + swirl
-                const nx = noise(e.turbSeed + time * e.turbScale, e.y * 0.01);
-                e.swirl1.phase += e.swirl1.speed;
-                e.swirl2.phase += e.swirl2.speed;
-                e.swirl3.phase += e.swirl3.speed;
-                const swirl = Math.sin(e.swirl1.phase) * e.swirl1.amp
-                    + Math.sin(e.swirl2.phase) * e.swirl2.amp
-                    + Math.sin(e.swirl3.phase) * e.swirl3.amp;
-                e.speedX = e.baseSpeedX + (nx - 0.5) * e.turbStrength + swirl;
+            gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+            gl.enableVertexAttribArray(simLoc.pos);
+            gl.vertexAttribPointer(simLoc.pos, 2, gl.FLOAT, false, 0, 0);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            gl.disableVertexAttribArray(simLoc.pos);
 
-                // Mouse repulsion — perpendicular distance to mouse path vector
-                const fmSpeed = Math.sqrt(frameVX * frameVX + frameVY * frameVY);
-                if (mouseMoving && fmSpeed > 0.5) {
-                    // Closest point on segment (prevFrame → current) to ember
-                    const segLenSq = frameVX * frameVX + frameVY * frameVY;
-                    let t = ((e.x - framePrevMX) * frameVX + (e.y - framePrevMY) * frameVY) / segLenSq;
-                    t = Math.max(0, Math.min(1, t));
-                    const closestX = framePrevMX + t * frameVX;
-                    const closestY = framePrevMY + t * frameVY;
-                    // Perpendicular vector from segment to ember
-                    const px = e.x - closestX;
-                    const py = e.y - closestY;
-                    const perpDist = Math.sqrt(px * px + py * py);
-                    if (perpDist < MOUSE_RADIUS && perpDist > 0) {
-                        const proximity = 1 - perpDist / MOUSE_RADIUS;
-                        const force = proximity * proximity * proximity * MOUSE_FORCE * fmSpeed;
-                        // Blend: mostly mouse direction + slight perpendicular scatter
-                        const mdx = frameVX / fmSpeed;  // mouse direction normalized
-                        const mdy = frameVY / fmSpeed;
-                        const pdx = px / perpDist;       // perpendicular direction normalized
-                        const pdy = py / perpDist;
-                        e.vx += (mdx * 0.75 + pdx * 0.25) * force;
-                        e.vy += (mdy * 0.75 + pdy * 0.25) * force;
-                    }
-                }
-                // Click explosion — radial burst away from click point
-                if (clickActive) {
-                    const cdx = e.x - clickX;
-                    const cdy = e.y - clickY;
-                    const cDist = Math.sqrt(cdx * cdx + cdy * cdy);
-                    if (cDist < CLICK_RADIUS && cDist > 0) {
-                        const t = cDist / CLICK_RADIUS;
-                        const falloff = (1 - t) * (1 - t);
-                        const cForce = falloff * CLICK_FORCE;
-                        e.vx += (cdx / cDist) * cForce;
-                        e.vy += (cdy / cDist) * cForce;
-                    }
-                }
-                e.vx *= 0.97;
-                e.vy *= 0.97;
+            gl.enable(gl.BLEND);
 
-                // Movement
-                const accel = 1 + (1 - e.y / canvas.height) * 0.15;
-                e.y -= e.speedY * accel;
-                e.x += e.speedX + e.vx;
-                e.y += e.vy;
-                e.angle += e.rotSpeed;
-
-                // Life & alpha
-                const lifeRatio = e.life / e.maxLife;
-                const fadeIn = Math.min(e.life / 40, 1);
-                const fadeOut = lifeRatio > 0.6 ? 1 - ((lifeRatio - 0.6) / 0.4) : 1;
-                const f1 = e.flicker1.amp * Math.sin(e.life * e.flicker1.speed + e.flicker1.offset);
-                const f2 = e.flicker2.amp * Math.sin(e.life * e.flicker2.speed + e.flicker2.offset);
-                const f3 = e.flicker3.amp * Math.sin(e.life * e.flicker3.speed + e.flicker3.offset);
-                const flicker = Math.max(0.3, 1 + f1 + f2 + f3);
-                const alpha = e.opacity * fadeIn * fadeOut * flicker;
-
-                if (e.life > e.maxLife || e.y < -30 || alpha < 0.01) {
-                    embers[i] = createEmber();
-                    continue;
-                }
-
-                // Color cooling — exact same as Canvas2D version
-                const coolRatio = Math.pow(lifeRatio, 0.7);
-                const hue = e.startHue + (e.endHue - e.startHue) * coolRatio;
-                const sat = e.startSat + (e.endSat - e.startSat) * coolRatio;
-                const light = e.startLight + (e.endLight - e.startLight) * coolRatio;
-                const glowR = Math.max(e.w, e.h);
-
-                // Glow center color: hsla(hue, sat%, light%, alpha*0.35)
-                const [gr, gg, gb] = hsl2rgb(hue, sat, light);
-                // Body center color: hsla(hue+8, 100%, min(light+10,70)%, alpha*0.7)
-                const [br, bg, bb] = hsl2rgb(hue + 8, 100, Math.min(light + 10, 70));
-                // Core color: hsla(hue+15, 100%, min(light+15,70)%, alpha*0.6)
-                const [cr, cg, cb] = hsl2rgb(hue + 15, 100, Math.min(light + 15, 70));
-
-                // Body and core as fraction of glow radius
-                const bodyR = e.w / glowR;      // body radius / glow radius
-                const coreR = (Math.min(e.w, e.h) * 0.35) / glowR;
-
-                const ci = count * 4;
-                posArr[count * 2]     = e.x;
-                posArr[count * 2 + 1] = e.y;
-                sizeArr[count]        = 3;//Math.min(3, Math.max(3, glowR * 1.4 * sizeScale));//1.4 * sizeScale;
-
-                glowColorArr[ci]     = gr;
-                glowColorArr[ci + 1] = gg;
-                glowColorArr[ci + 2] = gb;
-                glowColorArr[ci + 3] = alpha * 0.55;
-
-                bodyColorArr[ci]     = br;
-                bodyColorArr[ci + 1] = bg;
-                bodyColorArr[ci + 2] = bb;
-                bodyColorArr[ci + 3] = alpha * 0.9;
-
-                coreColorArr[ci]     = cr;
-                coreColorArr[ci + 1] = cg;
-                coreColorArr[ci + 2] = cb;
-                coreColorArr[ci + 3] = alpha * 0.85;
-
-                bodyRatioArr[count] = bodyR;
-                coreRatioArr[count] = coreR;
-                count++;
+            // Swap ping-pong
+            if (readTex === texA) {
+                readTex = texB; writeTex = texA; writeFBO = fboA;
+            } else {
+                readTex = texA; writeTex = texB; writeFBO = fboB;
             }
 
-            // Upload and draw
-            gl.useProgram(emberProg);
-            gl.uniform2f(eLoc.res, canvas.width, canvas.height);
+            // ── 3. RENDER PASS (to screen) ──
+            gl.viewport(0, 0, canvasW, canvasH);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.useProgram(renderProg);
+            gl.blendFunc(gl.ONE, gl.ONE); // additive
 
-            function uploadAttr(buf, loc, arr, size, count) {
-                gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-                gl.bufferData(gl.ARRAY_BUFFER, arr.subarray(0, count * size), gl.DYNAMIC_DRAW);
-                gl.enableVertexAttribArray(loc);
-                gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
-            }
-            uploadAttr(posBuf,       eLoc.pos,       posArr,       2, count);
-            uploadAttr(sizeBuf,      eLoc.size,      sizeArr,      1, count);
-            uploadAttr(glowColorBuf, eLoc.glowColor, glowColorArr, 4, count);
-            uploadAttr(bodyColorBuf, eLoc.bodyColor, bodyColorArr, 4, count);
-            uploadAttr(coreColorBuf, eLoc.coreColor, coreColorArr, 4, count);
-            uploadAttr(bodyRatioBuf, eLoc.bodyRatio, bodyRatioArr, 1, count);
-            uploadAttr(coreRatioBuf, eLoc.coreRatio, coreRatioArr, 1, count);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, readTex);
+            gl.uniform1i(renderLoc.state, 0);
+            gl.uniform2f(renderLoc.stateSize, NUM_EMBERS, STATE_ROWS);
+            gl.uniform2f(renderLoc.canvasSize, canvasW, canvasH);
 
-            gl.drawArrays(gl.POINTS, 0, count);
+            gl.bindBuffer(gl.ARRAY_BUFFER, indexBuf);
+            gl.enableVertexAttribArray(renderLoc.index);
+            gl.vertexAttribPointer(renderLoc.index, 1, gl.FLOAT, false, 0, 0);
+            gl.drawArrays(gl.POINTS, 0, NUM_EMBERS);
+            gl.disableVertexAttribArray(renderLoc.index);
 
-            // Store mouse position for next frame's segment
-            framePrevMX = mouseX;
-            framePrevMY = mouseY;
+            // Update mouse prev for next frame
+            prevMX = mouseX;
+            prevMY = mouseY;
             clickActive = false;
-
-            // ── Adaptive performance scaling ──
-            const now = performance.now();
-            if (lastFrameTime > 0) {
-                frameTimes.push(now - lastFrameTime);
-                if (frameTimes.length > SAMPLE_WINDOW) frameTimes.shift();
-
-                if (frameTimes.length === SAMPLE_WINDOW) {
-                    const avgMs = frameTimes.reduce((a, b) => a + b, 0) / SAMPLE_WINDOW;
-                    const avgFps = 1000 / avgMs;
-
-                    if (avgFps > TARGET_FPS && adaptiveTarget < emberCount) {
-                        // Headroom — add more embers
-                        const add = Math.max(10, Math.round(emberCount * RAMP_UP_RATE));
-                        adaptiveTarget = Math.min(emberCount, adaptiveTarget + add);
-                        applyEmberCount(adaptiveTarget);
-                        frameTimes.length = 0; // reset to re-measure with new count
-                    } else if (avgFps < MIN_FPS && adaptiveTarget > MIN_EMBERS) {
-                        // Struggling — reduce embers
-                        const remove = Math.max(10, Math.round(adaptiveTarget * RAMP_DOWN_RATE));
-                        adaptiveTarget = Math.max(MIN_EMBERS, adaptiveTarget - remove);
-                        applyEmberCount(adaptiveTarget);
-                        frameTimes.length = 0;
-                    }
-                }
-            }
-            lastFrameTime = now;
 
             requestAnimationFrame(animate);
         }
-        animate();
     })();
 </script>
 </body>
