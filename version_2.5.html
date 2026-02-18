@@ -815,6 +815,7 @@
                 uniform vec2 u_stateSize;    // (NUM_EMBERS, STATE_ROWS)
                 uniform vec2 u_canvasSize;   // visible canvas dimensions in px
                 uniform float u_time;        // frame counter (monotonic)
+                uniform float u_dt;          // delta time normalized to 144Hz (1.0 = one 144Hz frame)
                 uniform float u_speedScale;  // vertical speed multiplier (screen-relative)
                 uniform float u_driftScale;  // horizontal drift multiplier (screen-relative)
                 uniform vec2 u_mousePos;     // current mouse position in canvas coords
@@ -980,13 +981,13 @@
                                 }
                             }
 
-                            // Velocity damping (3% per frame) + position integration
-                            // Embers accelerate slightly as they rise (accel factor)
-                            vx *= 0.97; vy *= 0.97;
+                            // Velocity damping + position integration, scaled by delta time
+                            // pow(0.97, u_dt) gives frame-rate-independent exponential decay
+                            vx *= pow(0.97, u_dt); vy *= pow(0.97, u_dt);
                             float accel = 1.0 + (1.0 - y / u_canvasSize.y) * 0.15;
-                            y -= speedY * accel;
-                            x += speedX + vx;
-                            y += vy;
+                            y -= speedY * accel * u_dt;
+                            x += (speedX + vx) * u_dt;
+                            y += vy * u_dt;
 
                             gl_FragColor = vec4(x, y, vx, vy);
 
@@ -996,19 +997,19 @@
                         } else if (row < 2.5) {
                             // Row 2: advance angle by rotSpeed (from row 3.a)
                             float rotSpeed = rs(idx, 3.0).a;
-                            gl_FragColor = vec4(cur.rgb, cur.a + rotSpeed);
+                            gl_FragColor = vec4(cur.rgb, cur.a + rotSpeed * u_dt);
                         } else if (row < 3.5) {
-                            // Row 3: advance swirl1 phase (r += g, i.e. phase += speed)
-                            gl_FragColor = vec4(cur.r + cur.g, cur.gba);
+                            // Row 3: advance swirl1 phase (r += g * dt, i.e. phase += speed * dt)
+                            gl_FragColor = vec4(cur.r + cur.g * u_dt, cur.gba);
                         } else if (row < 4.5) {
                             // Row 4: advance swirl2 phase
-                            gl_FragColor = vec4(cur.r + cur.g, cur.gba);
+                            gl_FragColor = vec4(cur.r + cur.g * u_dt, cur.gba);
                         } else if (row < 5.5) {
                             // Row 5: advance swirl3 phase
-                            gl_FragColor = vec4(cur.r + cur.g, cur.gba);
+                            gl_FragColor = vec4(cur.r + cur.g * u_dt, cur.gba);
                         } else if (row < 6.5) {
-                            // Row 6: increment life counter (a += 1.0)
-                            gl_FragColor = vec4(cur.rgb, cur.a + 1.0);
+                            // Row 6: increment life counter by dt
+                            gl_FragColor = vec4(cur.rgb, cur.a + u_dt);
                         } else if (row < 7.5) {
                             // Row 7: immutable (flicker2 + maxLife)
                             gl_FragColor = cur;
@@ -1063,7 +1064,8 @@
             mousePrev: gl.getUniformLocation(simProg, 'u_mousePrev'),
             mouseMoving: gl.getUniformLocation(simProg, 'u_mouseMoving'),
             clickPos: gl.getUniformLocation(simProg, 'u_clickPos'),
-            clickActive: gl.getUniformLocation(simProg, 'u_clickActive')
+            clickActive: gl.getUniformLocation(simProg, 'u_clickActive'),
+            dt: gl.getUniformLocation(simProg, 'u_dt')
         };
 
         // ══════════════════════════════════════════════════
@@ -1377,6 +1379,7 @@
         let time = 0;
         let started = false;
         let lastLogTime = 0;
+        let lastFrameTime = performance.now();
 
         requestAnimationFrame(() => {
             resize();
@@ -1394,7 +1397,7 @@
 
         function animate() {
             const enableTrails = false;
-            
+
             if (!started) return;
 
             if (enableTrails) {
@@ -1417,7 +1420,10 @@
 
 
             // ── 2. SIMULATION PASS (to FBO) ──
-            time++;
+            let now = performance.now();
+            const dt = Math.min((now - lastFrameTime) / (1000 / 144), 8);
+            lastFrameTime = now;
+            time += dt;
             gl.viewport(0, 0, NUM_EMBERS, STATE_ROWS);
             gl.bindFramebuffer(gl.FRAMEBUFFER, writeFBO);
             gl.useProgram(simProg);
@@ -1429,6 +1435,7 @@
             gl.uniform2f(simLoc.stateSize, NUM_EMBERS, STATE_ROWS);
             gl.uniform2f(simLoc.canvasSize, canvasW, canvasH);
             gl.uniform1f(simLoc.time, time);
+            gl.uniform1f(simLoc.dt, dt);
             gl.uniform1f(simLoc.speedScale, speedScale);
             gl.uniform1f(simLoc.driftScale, driftScale);
             gl.uniform2f(simLoc.mousePos, mouseX, mouseY);
@@ -1481,7 +1488,7 @@
             clickActive = false;
 
             // Log ember count once per second
-            const now = performance.now();
+            now = performance.now();
             if (now - lastLogTime >= 1000) {
                 console.log(`Embers: ${NUM_EMBERS}`);
                 lastLogTime = now;
