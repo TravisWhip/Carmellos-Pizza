@@ -1012,8 +1012,23 @@
                             // Row 7: immutable (flicker2 + maxLife)
                             gl_FragColor = cur;
                         } else if (row < 8.5) {
-                            // Row 8: immutable (flicker3)
-                            gl_FragColor = cur;
+                            // Row 8: flicker3 (rgb immutable) + heat (a, mutable)
+                            float heat = cur.a;
+                            float heatGain = 0.0;
+                            vec4 pos = rs(idx, 0.0);
+                            vec2 mv = u_mousePos - u_mousePrev;
+                            float ms = length(mv);
+                            if (u_mouseMoving > 0.5 && ms > 0.5) {
+                                float slsq = dot(mv, mv);
+                                float tt = clamp(dot(pos.rg - u_mousePrev, mv) / slsq, 0.0, 1.0);
+                                float pd = length(pos.rg - (u_mousePrev + tt * mv));
+                                if (pd < MOUSE_RADIUS && pd > 0.0) {
+                                    float pr = 1.0 - pd / MOUSE_RADIUS;
+                                    heatGain = pr * pr * pr * ms * 0.008;
+                                }
+                            }
+                            heat = clamp(heat * 0.98 + heatGain, 0.0, 1.0);
+                            gl_FragColor = vec4(cur.rgb, heat);
                         } else if (row < 9.5) {
                             // Row 9: immutable (color ramp endpoints)
                             gl_FragColor = cur;
@@ -1102,7 +1117,8 @@
                     vec4 r4 = rs(a_index, 4.0);   // swirl2Phase, speed, amp, opacity
                     vec4 r6 = rs(a_index, 6.0);   // flicker1 speed/offset/amp, life
                     vec4 r7 = rs(a_index, 7.0);   // flicker2 speed/offset/amp, maxLife
-                    vec4 r8 = rs(a_index, 8.0);   // flicker3 speed/offset/amp
+                    vec4 r8 = rs(a_index, 8.0);   // flicker3 speed/offset/amp + heat
+                    float heat = r8.a;
                     vec4 r9 = rs(a_index, 9.0);   // startHue, endHue, startLight, endLight
                     vec4 r10 = rs(a_index, 10.0); // startSat, endSat, prevX, prevY
 
@@ -1136,6 +1152,11 @@
                     float sat = r10.r + (r10.g - r10.r) * coolRatio; // startSat → endSat
                     float light = r9.b + (r9.a - r9.b) * coolRatio;  // startLight → endLight
 
+                    // Heat: mouse proximity makes embers hotter (bigger, brighter, more yellow)
+                    hue += heat * 25.0;
+                    light = min(light + heat * 30.0, 85.0);
+                    alpha = min(alpha * (1.0 + heat * 1.5), 1.0);
+
                     // ── 3-layer color computation ──
                     // Glow:  base HSL color at current cooling stage
                     // Body:  slightly shifted hue (+8°), full saturation, brighter
@@ -1154,7 +1175,7 @@
                     // Position: convert canvas pixel coords to clip space [-1, 1]
                     vec2 clip = (vec2(x, y) / u_canvasSize) * 2.0 - 1.0;
                     gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
-                    gl_PointSize = 2.0;
+                    gl_PointSize = 2.0 + heat * 2.0;
                 }
             `),
             compile(gl.FRAGMENT_SHADER, `
