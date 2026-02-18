@@ -1027,6 +1027,15 @@
                                     heatGain = pr * pr * pr * ms * 0.008;
                                 }
                             }
+                            // Click heat burst
+                            if (u_clickActive > 0.5) {
+                                vec2 cd = pos.rg - u_clickPos;
+                                float cDist = length(cd);
+                                if (cDist < CLICK_RADIUS && cDist > 0.0) {
+                                    float ct = cDist / CLICK_RADIUS;
+                                    heatGain += (1.0 - ct) * (1.0 - ct) * 0.8;
+                                }
+                            }
                             heat = clamp(heat * 0.98 + heatGain, 0.0, 1.0);
                             gl_FragColor = vec4(cur.rgb, heat);
                         } else if (row < 9.5) {
