@@ -730,6 +730,7 @@
 
         const hero = canvas.parentElement;
         const NUM_EMBERS = 2000;
+        const DEBUG_FPS = 10; // set to e.g. 10 to throttle frame rate; null = unlocked
         const STATE_ROWS = 11;
         // State texture layout (width=NUM_EMBERS, height=STATE_ROWS):
         // Row 0:  x, y, vx, vy
@@ -1085,16 +1086,14 @@
                 //         define the 3-layer ember appearance.
                 // ─────────────────────────────────────────────────────────────
                 attribute float a_index;
+                attribute float a_which;     // 0 = prev position endpoint, 1 = current position endpoint
                 uniform sampler2D u_state;   // simulation state texture
                 uniform vec2 u_stateSize;    // (NUM_EMBERS, STATE_ROWS)
                 uniform vec2 u_canvasSize;   // canvas pixel dimensions
 
-                // Varyings passed to fragment shader for the 3-layer rendering
-                varying vec4 v_glowColor;    // outer glow: rgb + alpha
-                varying vec4 v_bodyColor;    // ember body: rgb + alpha
-                varying vec4 v_coreColor;    // hot core:   rgb + alpha
-                varying float v_bodyRatio;   // body radius as fraction of glow radius
-                varying float v_coreRatio;   // core radius as fraction of glow radius
+                // Varyings passed to fragment shader
+                varying vec4 v_color;        // ember color: rgb + alpha
+                varying float v_along;       // 0 = tail end, 1 = head end
 
                 // Read a state cell from the simulation texture
                 vec4 rs(float idx, float row) {
@@ -1166,98 +1165,42 @@
                     light = min(light + heat * 30.0, 85.0);
                     alpha = min(alpha * (1.0 + heat * 1.5), 1.0);
 
-                    // ── 3-layer color computation ──
-                    // Glow:  base HSL color at current cooling stage
-                    // Body:  slightly shifted hue (+8°), full saturation, brighter
-                    // Core:  further shifted (+15°), full saturation, brightest
-                    float glowR = max(w, h);
-                    vec3 gc = hsl2rgb(hue, sat, light);
+                    // ── Color ──
                     vec3 bc = hsl2rgb(hue + 8.0, 100.0, min(light + 10.0, 70.0));
-                    vec3 cc = hsl2rgb(hue + 15.0, 100.0, min(light + 15.0, 70.0));
+                    v_color = vec4(bc, alpha * 0.9);
 
-                    v_glowColor = vec4(gc, alpha * 0.55);
-                    v_bodyColor = vec4(bc, alpha * 0.9);
-                    v_coreColor = vec4(cc, alpha * 0.85);
-                    v_bodyRatio = w / glowR;               // body fills this fraction of the sprite
-                    v_coreRatio = (min(w, h) * 0.35) / glowR; // core is a small bright center
+                    // Line endpoint: a_which=0 → prev position, a_which=1 → current position
+                    float px = a_which < 0.5 ? r10.b : x;
+                    float py = a_which < 0.5 ? r10.a : y;
+                    v_along = a_which;
 
                     // Position: convert canvas pixel coords to clip space [-1, 1]
-                    vec2 clip = (vec2(x, y) / u_canvasSize) * 2.0 - 1.0;
+                    vec2 clip = (vec2(px, py) / u_canvasSize) * 2.0 - 1.0;
                     gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
-                    gl_PointSize = 2.0 + heat * 2.0;
                 }
             `),
             compile(gl.FRAGMENT_SHADER, `
                 // ─────────────────────────────────────────────────────────────
                 // RENDER FRAGMENT SHADER
                 //
-                // Draws each ember point sprite as 3 concentric radial layers
-                // with additive blending, creating a realistic glowing ember:
-                //   1. Outer glow — soft diffuse halo (widest, dimmest)
-                //   2. Body       — the visible ember shape (medium)
-                //   3. Core       — tiny bright hot center (smallest, brightest)
-                //
-                // 'd' = normalized distance from point sprite center [0..1]
-                // Each layer uses its own radial falloff curve.
-                // Final output is additively composited (premultiplied alpha).
+                // Draws each ember as a line segment from previous to current
+                // position. v_along interpolates 0→1 from tail to head,
+                // giving a comet-tail fade: dim at the tail, bright at the head.
+                // Output is additively blended onto the canvas.
                 // ─────────────────────────────────────────────────────────────
                 precision mediump float;
-                varying vec4 v_glowColor;
-                varying vec4 v_bodyColor;
-                varying vec4 v_coreColor;
-                varying float v_bodyRatio;   // fraction of sprite radius where body ends
-                varying float v_coreRatio;   // fraction of sprite radius where core ends
+                varying vec4 v_color;
+                varying float v_along;   // 0 = tail, 1 = head
                 void main() {
-                    // Distance from center of point sprite, normalized to [0..1]
-                    float d = length(gl_PointCoord - 0.5) * 2.0;
-                    if (d > 1.0) discard;
-
-                    // Layer 1: Outer glow — 3-zone radial falloff
-                    //   [0.0 - 0.1]  full brightness
-                    //   [0.1 - 0.35] rapid falloff to 20%
-                    //   [0.35 - 1.0] gentle fade to zero
-                    float glowA;
-                    vec3 glowC = v_glowColor.rgb;
-                    if (d < 0.1) {
-                        glowA = v_glowColor.a;
-                    } else if (d < 0.35) {
-                        glowA = mix(v_glowColor.a, v_glowColor.a * 0.2, (d - 0.1) / 0.25);
-                        glowC = mix(v_glowColor.rgb, v_glowColor.rgb * 0.7, (d - 0.1) / 0.25);
-                    } else {
-                        glowA = mix(v_glowColor.a * 0.2, 0.0, (d - 0.35) / 0.65);
-                        glowC = v_glowColor.rgb * 0.4;
-                    }
-
-                    // Layer 2: Ember body — 2-zone gradient within bodyRatio
-                    float bd = d / v_bodyRatio;
-                    float bodyA = 0.0;
-                    vec3 bodyC = v_bodyColor.rgb;
-                    if (bd < 1.0) {
-                        if (bd < 0.5) {
-                            bodyA = mix(v_bodyColor.a, v_bodyColor.a * 0.64, bd / 0.5);
-                            bodyC = mix(v_bodyColor.rgb, v_bodyColor.rgb * 0.85, bd / 0.5);
-                        } else {
-                            bodyA = mix(v_bodyColor.a * 0.64, v_bodyColor.a * 0.14, (bd - 0.5) / 0.5);
-                            bodyC = mix(v_bodyColor.rgb * 0.85, v_bodyColor.rgb * 0.5, (bd - 0.5) / 0.5);
-                        }
-                    }
-
-                    // Layer 3: Hot core — quadratic falloff for sharp bright center
-                    float cd = d / v_coreRatio;
-                    float coreA = 0.0;
-                    if (cd < 1.0) {
-                        coreA = v_coreColor.a * (1.0 - cd * cd);
-                    }
-
-                    // Additive composite of all 3 layers (premultiplied alpha)
-                    vec3 col = glowC * glowA + bodyC * bodyA + v_coreColor.rgb * coreA;
-                    float a = min(glowA + bodyA + coreA, 1.0);
-                    gl_FragColor = vec4(col, a);
+                    // Uniform brightness — the fade pass dims older segments each frame,
+                    // naturally creating the comet-tail effect without gaps at join points.
+                    gl_FragColor = vec4(v_color.rgb * v_color.a, v_color.a);
                 }
             `)
         );
         const renderLoc = {
             index: gl.getAttribLocation(renderProg, 'a_index'),
+            which: gl.getAttribLocation(renderProg, 'a_which'),
             state: gl.getUniformLocation(renderProg, 'u_state'),
             stateSize: gl.getUniformLocation(renderProg, 'u_stateSize'),
             canvasSize: gl.getUniformLocation(renderProg, 'u_canvasSize')
@@ -1290,12 +1233,19 @@
         gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
 
-        // ── Ember index buffer for render pass ──
+        // ── Ember index buffer for render pass (2 vertices per ember for GL_LINES) ──
         const indexBuf = gl.createBuffer();
-        const indexData = new Float32Array(NUM_EMBERS);
-        for (let i = 0; i < NUM_EMBERS; i++) indexData[i] = i;
+        const indexData = new Float32Array(NUM_EMBERS * 2);
+        for (let i = 0; i < NUM_EMBERS; i++) { indexData[i*2] = i; indexData[i*2+1] = i; }
         gl.bindBuffer(gl.ARRAY_BUFFER, indexBuf);
         gl.bufferData(gl.ARRAY_BUFFER, indexData, gl.STATIC_DRAW);
+
+        // ── Endpoint flag: 0 = prev position, 1 = current position ──
+        const whichBuf = gl.createBuffer();
+        const whichData = new Float32Array(NUM_EMBERS * 2);
+        for (let i = 0; i < NUM_EMBERS; i++) { whichData[i*2] = 0.0; whichData[i*2+1] = 1.0; }
+        gl.bindBuffer(gl.ARRAY_BUFFER, whichBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, whichData, gl.STATIC_DRAW);
 
         // ── State texture helpers ──
         function createStateTex(data) {
@@ -1520,8 +1470,13 @@
             gl.bindBuffer(gl.ARRAY_BUFFER, indexBuf);
             gl.enableVertexAttribArray(renderLoc.index);
             gl.vertexAttribPointer(renderLoc.index, 1, gl.FLOAT, false, 0, 0);
-            gl.drawArrays(gl.POINTS, 0, NUM_EMBERS);
+            gl.bindBuffer(gl.ARRAY_BUFFER, whichBuf);
+            gl.enableVertexAttribArray(renderLoc.which);
+            gl.vertexAttribPointer(renderLoc.which, 1, gl.FLOAT, false, 0, 0);
+            gl.lineWidth(2);
+            gl.drawArrays(gl.LINES, 0, NUM_EMBERS * 2);
             gl.disableVertexAttribArray(renderLoc.index);
+            gl.disableVertexAttribArray(renderLoc.which);
 
             // Update mouse prev for next frame
             prevMX = mouseX;
@@ -1535,7 +1490,11 @@
                 lastLogTime = now;
             }
 
-            requestAnimationFrame(animate);
+            if (DEBUG_FPS) {
+                setTimeout(() => requestAnimationFrame(animate), 1000 / DEBUG_FPS);
+            } else {
+                requestAnimationFrame(animate);
+            }
         }
     })();
 </script>
