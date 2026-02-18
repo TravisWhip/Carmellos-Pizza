@@ -142,6 +142,7 @@
         /* ── EMBERS ── */
         .embers-canvas {
             position:absolute; inset:0; z-index:1; pointer-events:none;
+            mix-blend-mode: screen;
         }
 
         .scroll-hint {
@@ -713,8 +714,7 @@
     (function() {
         const canvas = document.getElementById('embersCanvas');
         const gl = canvas.getContext('webgl', {
-            alpha: true,
-            premultipliedAlpha: true,
+            alpha: false,
             preserveDrawingBuffer: true
         });
         if (!gl) { console.warn('WebGL not available'); return; }
@@ -730,7 +730,7 @@
 
         const hero = canvas.parentElement;
         const NUM_EMBERS = 2000;
-        const DEBUG_FPS = 10; // set to e.g. 10 to throttle frame rate; null = unlocked
+        const DEBUG_FPS = null; // set to e.g. 10 to throttle frame rate; null = unlocked
         const STATE_ROWS = 11;
         // State texture layout (width=NUM_EMBERS, height=STATE_ROWS):
         // Row 0:  x, y, vx, vy
@@ -1402,10 +1402,7 @@
                 gl.viewport(0, 0, canvasW, canvasH);
                 gl.bindFramebuffer(gl.FRAMEBUFFER, null);
                 gl.useProgram(fadeProg);
-                gl.blendFuncSeparate(
-                    gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA,
-                    gl.ZERO, gl.ONE_MINUS_SRC_ALPHA
-                );
+                gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // dim canvas by 15% each frame
                 gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
                 gl.enableVertexAttribArray(fadeLoc.pos);
                 gl.vertexAttribPointer(fadeLoc.pos, 2, gl.FLOAT, false, 0, 0);
