@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Particle Simulation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+        }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            z-index: 100;
+        }
+        #controls h2 {
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        .control-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="range"] {
+            width: 200px;
+        }
+        button {
+            background: #4CAF50;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        #resetBtn {
+            background: #f44336;
+        }
+        #resetBtn:hover {
+            background: #da190b;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particleCanvas"></canvas>
+
+    <div id="controls">
+        <h2>Particle Controls</h2>
+        <div class="control-group">
+            <label for="particleCount">Particle Count: <span id="countValue">1000</span></label>
+            <input type="range" id="particleCount" min="100" max="100000" value="1000">
+        </div>
+        <div class="control-group">
+            <label for="speed">Speed: <span id="speedValue">1.0</span>x</label>
+            <input type="range" id="speed" min="0.1" max="10" step="0.1" value="1.0">
+        </div>
+        <div class="control-group">
+            <label for="particleSize">Particle Size: <span id="sizeValue">1.0</span></label>
+            <input type="range" id="particleSize" min="0.1" max="10" step="0.1" value="1.0">
+        </div>
+        <div class="control-group">
+            <label>
+                <input type="checkbox" id="uniformSize"> Uniform Size
+            </label>
+        </div>
+        <div class="control-group">
+            <label>
+                <input type="checkbox" id="trailEffect" checked> Trail Effect
+            </label>
+        </div>
+        <button id="resetBtn">Reset Particles</button>
+    </div>
+
+    <script>
+        // Get the canvas and context
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Set canvas to full window size
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Particle class
+        class Particle {
+            constructor(sizeFactor = 1, isUniform = false) {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                if (isUniform) {
+                    this.size = 5 * sizeFactor; // Fixed size for uniform particles
+                } else {
+                    this.size = Math.random() * 3 + 1 * sizeFactor;
+                }
+                this.speedX = Math.random() * 3 - 1.5;
+                this.speedY = Math.random() * 3 - 1.5;
+                this.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+            }
+
+            update(speedFactor, deltaTime) {
+                this.x += this.speedX * speedFactor * deltaTime;
+                this.y += this.speedY * speedFactor * deltaTime;
+
+                // Bounce off edges
+                if (this.x < 0 || this.x > canvas.width) {
+                    this.speedX = -this.speedX;
+                }
+                if (this.y < 0 || this.y > canvas.height) {
+                    this.speedY = -this.speedY;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Create particles
+        let particles = [];
+        let particleCount = 1000;
+        let speedFactor = 1.0;
+        let sizeFactor = 1.0;
+        let isUniformSize = false;
+
+        function createParticles(count) {
+            particles = [];
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(sizeFactor, isUniformSize));
+            }
+        }
+
+        createParticles(particleCount);
+
+        // Animation loop with frame-rate independent movement
+        function animate(timestamp) {
+            // Calculate time delta for frame-rate independence
+            const deltaTime = Math.min(timestamp - (animate.lastTime || timestamp), 100) / 16; // Normalize to 60fps base
+            animate.lastTime = timestamp;
+
+            // Clear canvas based on trail effect setting
+            if (document.getElementById('trailEffect').checked) {
+                // Clear canvas with a semi-transparent black for trail effect
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            } else {
+                // Clear canvas fully for no trail effect
+                ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+            }
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Update and draw particles
+            particles.forEach(particle => {
+                particle.update(speedFactor, deltaTime);
+                particle.draw();
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        // Set up UI controls
+        const particleCountSlider = document.getElementById('particleCount');
+        const speedSlider = document.getElementById('speed');
+        const sizeSlider = document.getElementById('particleSize');
+        const uniformSizeCheckbox = document.getElementById('uniformSize');
+        const countValue = document.getElementById('countValue');
+        const speedValue = document.getElementById('speedValue');
+        const sizeValue = document.getElementById('sizeValue');
+        const resetBtn = document.getElementById('resetBtn');
+
+        particleCountSlider.addEventListener('input', function() {
+            particleCount = parseInt(this.value);
+            countValue.textContent = particleCount;
+            createParticles(particleCount);
+        });
+
+        speedSlider.addEventListener('input', function() {
+            speedFactor = parseFloat(this.value);
+            speedValue.textContent = speedFactor.toFixed(1);
+        });
+
+        sizeSlider.addEventListener('input', function() {
+            sizeFactor = parseFloat(this.value);
+            sizeValue.textContent = sizeFactor.toFixed(1);
+            // Recreate particles to apply new size factor to all particles
+            createParticles(particleCount);
+        });
+
+        uniformSizeCheckbox.addEventListener('change', function() {
+            isUniformSize = this.checked;
+            createParticles(particleCount);
+        });
+
+        const trailEffectCheckbox = document.getElementById('trailEffect');
+        trailEffectCheckbox.addEventListener('change', function() {
+            // The animation loop will automatically use the new setting on the next frame
+        });
+
+        resetBtn.addEventListener('click', function() {
+            createParticles(particleCount);
+        });
+
+        // Start animation
+        animate();
+    </script>
+</body>
+</html>

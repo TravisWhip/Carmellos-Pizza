@@ -772,115 +772,181 @@
                 void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
             `),
             compile(gl.FRAGMENT_SHADER, `
+                // ─────────────────────────────────────────────────────────────
+                // SIMULATION FRAGMENT SHADER
+                //
+                // This shader IS the particle physics engine. It runs as a
+                // fullscreen quad over the state texture FBO (NUM_EMBERS x 11).
+                // Each fragment = one RGBA cell in the state table.
+                //
+                // gl_FragCoord.x → ember index (which particle)
+                // gl_FragCoord.y → state row   (which property)
+                //
+                // It reads the CURRENT state from u_state (ping texture),
+                // computes the NEXT state, and writes it to the FBO (pong
+                // texture). The JS loop then swaps ping/pong for next frame.
+                //
+                // State texture layout (each row stores 4 floats as RGBA):
+                //   Row 0:  x, y, vx, vy              ← position & velocity (MUTABLE)
+                //   Row 1:  w, h, speedY, baseSpeedX   ← size & base movement (immutable)
+                //   Row 2:  turbSeed, turbScale,        ← turbulence params (immutable)
+                //           turbStrength, angle          ← angle is MUTABLE
+                //   Row 3:  swirl1Phase, swirl1Speed,   ← oscillator 1 (phase MUTABLE)
+                //           swirl1Amp, rotSpeed
+                //   Row 4:  swirl2Phase, swirl2Speed,   ← oscillator 2 (phase MUTABLE)
+                //           swirl2Amp, opacity
+                //   Row 5:  swirl3Phase, swirl3Speed,   ← oscillator 3 (phase MUTABLE)
+                //           swirl3Amp, isSpark
+                //   Row 6:  flicker1Speed, flicker1Offset,
+                //           flicker1Amp, life           ← life is MUTABLE
+                //   Row 7:  flicker2Speed, flicker2Offset,
+                //           flicker2Amp, maxLife         ← immutable
+                //   Row 8:  flicker3Speed, flicker3Offset,
+                //           flicker3Amp, 0               ← immutable
+                //   Row 9:  startHue, endHue,
+                //           startLight, endLight         ← immutable
+                //   Row 10: startSat, endSat,
+                //           prevX, prevY                 ← prevPos MUTABLE
+                // ─────────────────────────────────────────────────────────────
                 precision highp float;
-                uniform sampler2D u_state;
-                uniform vec2 u_stateSize;
-                uniform vec2 u_canvasSize;
-                uniform float u_time;
-                uniform float u_speedScale;
-                uniform float u_driftScale;
-                uniform vec2 u_mousePos;
-                uniform vec2 u_mousePrev;
-                uniform float u_mouseMoving;
-                uniform vec2 u_clickPos;
-                uniform float u_clickActive;
 
-                const float MOUSE_RADIUS = 200.0;
-                const float MOUSE_FORCE = 0.06;
-                const float CLICK_RADIUS = 300.0;
-                const float CLICK_FORCE = 8.0;
+                uniform sampler2D u_state;   // current state (ping texture)
+                uniform vec2 u_stateSize;    // (NUM_EMBERS, STATE_ROWS)
+                uniform vec2 u_canvasSize;   // visible canvas dimensions in px
+                uniform float u_time;        // frame counter (monotonic)
+                uniform float u_speedScale;  // vertical speed multiplier (screen-relative)
+                uniform float u_driftScale;  // horizontal drift multiplier (screen-relative)
+                uniform vec2 u_mousePos;     // current mouse position in canvas coords
+                uniform vec2 u_mousePrev;    // previous frame mouse position
+                uniform float u_mouseMoving; // 1.0 if mouse is actively moving, else 0.0
+                uniform vec2 u_clickPos;     // position of most recent click
+                uniform float u_clickActive; // 1.0 on the frame a click occurred, else 0.0
 
+                const float MOUSE_RADIUS = 200.0;  // px radius of mouse influence
+                const float MOUSE_FORCE = 0.06;     // base push strength per unit speed
+                const float CLICK_RADIUS = 300.0;   // px radius of click explosion
+                const float CLICK_FORCE = 8.0;      // radial burst strength
+
+                // Read a state cell: rs(emberIndex, rowIndex) → vec4
                 vec4 rs(float idx, float row) {
                     return texture2D(u_state, vec2((idx + 0.5) / u_stateSize.x, (row + 0.5) / u_stateSize.y));
                 }
 
+                // Hash-based PRNG (Dave Hoskins). Returns [0,1).
                 float hash21(vec2 p) {
                     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
                     p3 += dot(p3, p3.yzx + 33.33);
                     return fract((p3.x + p3.y) * p3.z);
                 }
 
+                // Deterministic random for ember recycling.
+                // Seeded by ember id + channel offset + frame time so each
+                // recycled ember gets unique but reproducible properties.
                 float rand(float id, float ch) {
                     return hash21(vec2(id * 17.23 + ch * 31.71, u_time * 0.731 + ch * 7.13));
                 }
 
+                // Simple value noise used for turbulent horizontal drift.
                 float noise(float x, float y) {
                     return fract(sin(x * 12.9898 + y * 78.233) * 43758.5453);
                 }
 
                 void main() {
                     vec2 coord = floor(gl_FragCoord.xy);
-                    float idx = coord.x;
-                    float row = coord.y;
+                    float idx = coord.x;  // which ember
+                    float row = coord.y;  // which property row
                     vec4 cur = rs(idx, row);
 
-                    // Check recycle condition
+                    // ── Recycle check ──
+                    // An ember is "dead" when its life exceeds maxLife or
+                    // it has drifted above the visible area (y < -30).
                     vec4 r0 = rs(idx, 0.0);
                     float life = rs(idx, 6.0).a;
                     float maxLife = rs(idx, 7.0).a;
                     bool dead = life > maxLife || r0.g < -30.0;
 
                     if (dead) {
-                        // ── RECYCLE ──
+                        // ── RECYCLE: reinitialize all properties ──
+                        // Each row generates its own random values via rand()
+                        // with unique channel offsets to avoid correlation.
+                        // Sparks (30% chance) are smaller and shorter-lived.
                         float isSpark = rand(idx, 0.0) < 0.3 ? 1.0 : 0.0;
 
                         if (row < 0.5) {
+                            // Row 0: spawn at random x, just below canvas bottom
                             gl_FragColor = vec4(
                                 rand(idx, 1.0) * u_canvasSize.x,
                                 u_canvasSize.y + rand(idx, 2.0) * 60.0,
                                 0.0, 0.0);
                         } else if (row < 1.5) {
+                            // Row 1: size & movement speeds
                             float w = isSpark > 0.5 ? rand(idx,3.0)*1.5+0.5 : rand(idx,3.0)*2.5+1.5;
                             float h = isSpark > 0.5 ? rand(idx,4.0)*1.0+0.3 : rand(idx,4.0)*1.5+0.8;
                             float spY = (isSpark > 0.5 ? rand(idx,5.0)*0.8+0.3 : rand(idx,5.0)*0.7+0.4) * u_speedScale;
                             float bsX = (rand(idx,6.0) - 0.5) * 0.25 * u_driftScale;
                             gl_FragColor = vec4(w, h, spY, bsX);
                         } else if (row < 2.5) {
+                            // Row 2: turbulence seed/scale/strength, initial angle
                             gl_FragColor = vec4(rand(idx,7.0)*1000.0, rand(idx,8.0)*0.002+0.001,
                                 rand(idx,9.0)*0.8+0.3, rand(idx,10.0)*6.283);
                         } else if (row < 3.5) {
+                            // Row 3: swirl oscillator 1 (phase, speed, amp) + rotation speed
                             gl_FragColor = vec4(rand(idx,11.0)*6.283, rand(idx,12.0)*0.018+0.005,
                                 rand(idx,13.0)*0.4+0.15, (rand(idx,14.0)-0.5)*0.015);
                         } else if (row < 4.5) {
+                            // Row 4: swirl oscillator 2 + base opacity
                             float op = isSpark > 0.5 ? rand(idx,18.0)*0.3+0.2 : rand(idx,18.0)*0.4+0.15;
                             gl_FragColor = vec4(rand(idx,15.0)*6.283, rand(idx,16.0)*0.04+0.02,
                                 rand(idx,17.0)*0.25+0.1, op);
                         } else if (row < 5.5) {
+                            // Row 5: swirl oscillator 3 + spark flag
                             gl_FragColor = vec4(rand(idx,19.0)*6.283, rand(idx,20.0)*0.08+0.04,
                                 rand(idx,21.0)*0.15+0.05, isSpark);
                         } else if (row < 6.5) {
+                            // Row 6: flicker oscillator 1 + life (reset to 0)
                             gl_FragColor = vec4(rand(idx,22.0)*0.04+0.01, rand(idx,23.0)*6.283, 0.2, 0.0);
                         } else if (row < 7.5) {
+                            // Row 7: flicker oscillator 2 + maxLife
                             float ml = isSpark > 0.5 ? rand(idx,26.0)*300.0+150.0 : rand(idx,26.0)*800.0+500.0;
                             gl_FragColor = vec4(rand(idx,24.0)*0.09+0.03, rand(idx,25.0)*6.283, 0.15, ml);
                         } else if (row < 8.5) {
+                            // Row 8: flicker oscillator 3
                             gl_FragColor = vec4(rand(idx,27.0)*0.2+0.05, rand(idx,28.0)*6.283, 0.1, 0.0);
                         } else if (row < 9.5) {
+                            // Row 9: color ramp endpoints (hue and lightness)
                             gl_FragColor = vec4(rand(idx,29.0)*15.0+25.0, rand(idx,30.0)*10.0,
                                 rand(idx,31.0)*10.0+45.0, rand(idx,32.0)*10.0+20.0);
                         } else {
+                            // Row 10: saturation ramp + initial prevPos = spawn position
                             gl_FragColor = vec4(100.0, rand(idx,33.0)*20.0+80.0,
                                 rand(idx,1.0)*u_canvasSize.x, u_canvasSize.y + rand(idx,2.0)*60.0);
                         }
                     } else {
-                        // ── NORMAL UPDATE ──
+                        // ── NORMAL UPDATE (per-row logic) ──
                         if (row < 0.5) {
-                            // Position & velocity
-                            vec4 r1 = rs(idx, 1.0);
-                            vec4 r2 = rs(idx, 2.0);
-                            vec4 r3 = rs(idx, 3.0);
-                            vec4 r4 = rs(idx, 4.0);
-                            vec4 r5 = rs(idx, 5.0);
+                            // ── Row 0: PHYSICS ──
+                            // This is the core simulation step. Reads movement
+                            // params from rows 1-5, applies turbulence + swirl
+                            // drift, mouse/click forces, velocity damping, and
+                            // integrates position.
+                            vec4 r1 = rs(idx, 1.0); // w, h, speedY, baseSpeedX
+                            vec4 r2 = rs(idx, 2.0); // turbSeed, turbScale, turbStrength, angle
+                            vec4 r3 = rs(idx, 3.0); // swirl1Phase, speed, amp, rotSpeed
+                            vec4 r4 = rs(idx, 4.0); // swirl2Phase, speed, amp, opacity
+                            vec4 r5 = rs(idx, 5.0); // swirl3Phase, speed, amp, isSpark
 
                             float x = r0.r, y = r0.g, vx = r0.b, vy = r0.a;
                             float speedY = r1.b, baseSpeedX = r1.a;
                             float turbSeed = r2.r, turbScale = r2.g, turbStrength = r2.b;
 
+                            // Horizontal drift: noise-based turbulence + 3 sine swirl oscillators
                             float nx = noise(turbSeed + u_time * turbScale, y * 0.01);
                             float swirl = sin(r3.r) * r3.b + sin(r4.r) * r4.b + sin(r5.r) * r5.b;
                             float speedX = baseSpeedX + (nx - 0.5) * turbStrength + swirl;
 
-                            // Mouse repulsion
+                            // Mouse repulsion: find closest point on the mouse movement
+                            // segment (prevFrame → currentFrame), push embers away using
+                            // a blend of mouse direction (75%) and perpendicular scatter (25%)
                             vec2 mVec = u_mousePos - u_mousePrev;
                             float mSpeed = length(mVec);
                             if (u_mouseMoving > 0.5 && mSpeed > 0.5) {
@@ -900,7 +966,8 @@
                                 }
                             }
 
-                            // Click explosion
+                            // Click explosion: radial burst away from click point
+                            // with quadratic falloff
                             if (u_clickActive > 0.5) {
                                 vec2 cd = vec2(x, y) - u_clickPos;
                                 float cDist = length(cd);
@@ -912,6 +979,8 @@
                                 }
                             }
 
+                            // Velocity damping (3% per frame) + position integration
+                            // Embers accelerate slightly as they rise (accel factor)
                             vx *= 0.97; vy *= 0.97;
                             float accel = 1.0 + (1.0 - y / u_canvasSize.y) * 0.15;
                             y -= speedY * accel;
@@ -921,31 +990,36 @@
                             gl_FragColor = vec4(x, y, vx, vy);
 
                         } else if (row < 1.5) {
-                            gl_FragColor = cur; // immutable
+                            // Row 1: immutable (size & base speeds)
+                            gl_FragColor = cur;
                         } else if (row < 2.5) {
-                            // angle += rotSpeed
+                            // Row 2: advance angle by rotSpeed (from row 3.a)
                             float rotSpeed = rs(idx, 3.0).a;
                             gl_FragColor = vec4(cur.rgb, cur.a + rotSpeed);
                         } else if (row < 3.5) {
-                            // swirl1 phase += speed
+                            // Row 3: advance swirl1 phase (r += g, i.e. phase += speed)
                             gl_FragColor = vec4(cur.r + cur.g, cur.gba);
                         } else if (row < 4.5) {
-                            // swirl2 phase += speed
+                            // Row 4: advance swirl2 phase
                             gl_FragColor = vec4(cur.r + cur.g, cur.gba);
                         } else if (row < 5.5) {
-                            // swirl3 phase += speed
+                            // Row 5: advance swirl3 phase
                             gl_FragColor = vec4(cur.r + cur.g, cur.gba);
                         } else if (row < 6.5) {
-                            // life += 1
+                            // Row 6: increment life counter (a += 1.0)
                             gl_FragColor = vec4(cur.rgb, cur.a + 1.0);
                         } else if (row < 7.5) {
-                            gl_FragColor = cur; // immutable
+                            // Row 7: immutable (flicker2 + maxLife)
+                            gl_FragColor = cur;
                         } else if (row < 8.5) {
-                            gl_FragColor = cur; // immutable
+                            // Row 8: immutable (flicker3)
+                            gl_FragColor = cur;
                         } else if (row < 9.5) {
-                            gl_FragColor = cur; // immutable
+                            // Row 9: immutable (color ramp endpoints)
+                            gl_FragColor = cur;
                         } else {
-                            // prevX, prevY = current position (before this frame's update)
+                            // Row 10: snapshot current position as prevPos
+                            // (reads r0 from INPUT texture = pre-update position)
                             gl_FragColor = vec4(cur.rg, r0.rg);
                         }
                     }
@@ -972,21 +1046,38 @@
         // ══════════════════════════════════════════════════
         const renderProg = linkProg(
             compile(gl.VERTEX_SHADER, `
+                // ─────────────────────────────────────────────────────────────
+                // RENDER VERTEX SHADER
+                //
+                // Draws each ember as a WebGL point sprite. Reads per-ember
+                // state from the simulation texture to determine position,
+                // color, and opacity. All color math (HSL→RGB, cooling curve,
+                // flicker) runs here so the fragment shader only handles the
+                // radial glow shape.
+                //
+                // Input:  a_index — ember ID (0..NUM_EMBERS-1), used to look
+                //         up state from the texture.
+                // Output: gl_Position, gl_PointSize, and 5 varyings that
+                //         define the 3-layer ember appearance.
+                // ─────────────────────────────────────────────────────────────
                 attribute float a_index;
-                uniform sampler2D u_state;
-                uniform vec2 u_stateSize;
-                uniform vec2 u_canvasSize;
+                uniform sampler2D u_state;   // simulation state texture
+                uniform vec2 u_stateSize;    // (NUM_EMBERS, STATE_ROWS)
+                uniform vec2 u_canvasSize;   // canvas pixel dimensions
 
-                varying vec4 v_glowColor;
-                varying vec4 v_bodyColor;
-                varying vec4 v_coreColor;
-                varying float v_bodyRatio;
-                varying float v_coreRatio;
+                // Varyings passed to fragment shader for the 3-layer rendering
+                varying vec4 v_glowColor;    // outer glow: rgb + alpha
+                varying vec4 v_bodyColor;    // ember body: rgb + alpha
+                varying vec4 v_coreColor;    // hot core:   rgb + alpha
+                varying float v_bodyRatio;   // body radius as fraction of glow radius
+                varying float v_coreRatio;   // core radius as fraction of glow radius
 
+                // Read a state cell from the simulation texture
                 vec4 rs(float idx, float row) {
                     return texture2D(u_state, vec2((idx + 0.5) / u_stateSize.x, (row + 0.5) / u_stateSize.y));
                 }
 
+                // HSL → RGB conversion helpers (h in degrees, s/l in percent)
                 float hue2rgb(float p, float q, float t) {
                     if (t < 0.0) t += 1.0;
                     if (t > 1.0) t -= 1.0;
@@ -1005,14 +1096,15 @@
                 }
 
                 void main() {
-                    vec4 r0 = rs(a_index, 0.0);
-                    vec4 r1 = rs(a_index, 1.0);
-                    vec4 r4 = rs(a_index, 4.0);
-                    vec4 r6 = rs(a_index, 6.0);
-                    vec4 r7 = rs(a_index, 7.0);
-                    vec4 r8 = rs(a_index, 8.0);
-                    vec4 r9 = rs(a_index, 9.0);
-                    vec4 r10 = rs(a_index, 10.0);
+                    // Fetch all state rows needed for this ember
+                    vec4 r0 = rs(a_index, 0.0);   // x, y, vx, vy
+                    vec4 r1 = rs(a_index, 1.0);   // w, h, speedY, baseSpeedX
+                    vec4 r4 = rs(a_index, 4.0);   // swirl2Phase, speed, amp, opacity
+                    vec4 r6 = rs(a_index, 6.0);   // flicker1 speed/offset/amp, life
+                    vec4 r7 = rs(a_index, 7.0);   // flicker2 speed/offset/amp, maxLife
+                    vec4 r8 = rs(a_index, 8.0);   // flicker3 speed/offset/amp
+                    vec4 r9 = rs(a_index, 9.0);   // startHue, endHue, startLight, endLight
+                    vec4 r10 = rs(a_index, 10.0); // startSat, endSat, prevX, prevY
 
                     float x = r0.r, y = r0.g;
                     float w = r1.r, h = r1.g;
@@ -1020,11 +1112,14 @@
                     float life = r6.a;
                     float maxLife = r7.a;
 
+                    // ── Alpha envelope ──
+                    // Fade in over first 40 frames, fade out during last 40% of life
                     float lifeRatio = life / maxLife;
                     float fadeIn = min(life / 40.0, 1.0);
                     float fadeOut = lifeRatio > 0.6 ? 1.0 - ((lifeRatio - 0.6) / 0.4) : 1.0;
 
-                    // Flicker: amp * sin(life * speed + offset)
+                    // 3-layer flicker: sum of sine oscillators at different frequencies
+                    // Each: amp * sin(life * speed + phaseOffset)
                     float f1 = r6.b * sin(life * r6.r + r6.g);
                     float f2 = r7.b * sin(life * r7.r + r7.g);
                     float f3 = r8.b * sin(life * r8.r + r8.g);
@@ -1032,12 +1127,19 @@
 
                     float alpha = opacity * fadeIn * fadeOut * flicker;
 
-                    // Color cooling
+                    // ── Color cooling ──
+                    // Embers start yellow-orange (warm) and cool to deep red over
+                    // their lifetime. coolRatio has a pow(0.7) curve so cooling
+                    // accelerates toward end of life.
                     float coolRatio = pow(lifeRatio, 0.7);
-                    float hue = r9.r + (r9.g - r9.r) * coolRatio;
-                    float sat = r10.r + (r10.g - r10.r) * coolRatio;
-                    float light = r9.b + (r9.a - r9.b) * coolRatio;
+                    float hue = r9.r + (r9.g - r9.r) * coolRatio;   // startHue → endHue
+                    float sat = r10.r + (r10.g - r10.r) * coolRatio; // startSat → endSat
+                    float light = r9.b + (r9.a - r9.b) * coolRatio;  // startLight → endLight
 
+                    // ── 3-layer color computation ──
+                    // Glow:  base HSL color at current cooling stage
+                    // Body:  slightly shifted hue (+8°), full saturation, brighter
+                    // Core:  further shifted (+15°), full saturation, brightest
                     float glowR = max(w, h);
                     vec3 gc = hsl2rgb(hue, sat, light);
                     vec3 bc = hsl2rgb(hue + 8.0, 100.0, min(light + 10.0, 70.0));
@@ -1046,25 +1148,44 @@
                     v_glowColor = vec4(gc, alpha * 0.55);
                     v_bodyColor = vec4(bc, alpha * 0.9);
                     v_coreColor = vec4(cc, alpha * 0.85);
-                    v_bodyRatio = w / glowR;
-                    v_coreRatio = (min(w, h) * 0.35) / glowR;
+                    v_bodyRatio = w / glowR;               // body fills this fraction of the sprite
+                    v_coreRatio = (min(w, h) * 0.35) / glowR; // core is a small bright center
 
+                    // Position: convert canvas pixel coords to clip space [-1, 1]
                     vec2 clip = (vec2(x, y) / u_canvasSize) * 2.0 - 1.0;
                     gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
-                    gl_PointSize = 3.0;
+                    gl_PointSize = 2.0;
                 }
             `),
             compile(gl.FRAGMENT_SHADER, `
+                // ─────────────────────────────────────────────────────────────
+                // RENDER FRAGMENT SHADER
+                //
+                // Draws each ember point sprite as 3 concentric radial layers
+                // with additive blending, creating a realistic glowing ember:
+                //   1. Outer glow — soft diffuse halo (widest, dimmest)
+                //   2. Body       — the visible ember shape (medium)
+                //   3. Core       — tiny bright hot center (smallest, brightest)
+                //
+                // 'd' = normalized distance from point sprite center [0..1]
+                // Each layer uses its own radial falloff curve.
+                // Final output is additively composited (premultiplied alpha).
+                // ─────────────────────────────────────────────────────────────
                 precision mediump float;
                 varying vec4 v_glowColor;
                 varying vec4 v_bodyColor;
                 varying vec4 v_coreColor;
-                varying float v_bodyRatio;
-                varying float v_coreRatio;
+                varying float v_bodyRatio;   // fraction of sprite radius where body ends
+                varying float v_coreRatio;   // fraction of sprite radius where core ends
                 void main() {
+                    // Distance from center of point sprite, normalized to [0..1]
                     float d = length(gl_PointCoord - 0.5) * 2.0;
                     if (d > 1.0) discard;
 
+                    // Layer 1: Outer glow — 3-zone radial falloff
+                    //   [0.0 - 0.1]  full brightness
+                    //   [0.1 - 0.35] rapid falloff to 20%
+                    //   [0.35 - 1.0] gentle fade to zero
                     float glowA;
                     vec3 glowC = v_glowColor.rgb;
                     if (d < 0.1) {
@@ -1077,6 +1198,7 @@
                         glowC = v_glowColor.rgb * 0.4;
                     }
 
+                    // Layer 2: Ember body — 2-zone gradient within bodyRatio
                     float bd = d / v_bodyRatio;
                     float bodyA = 0.0;
                     vec3 bodyC = v_bodyColor.rgb;
@@ -1090,12 +1212,14 @@
                         }
                     }
 
+                    // Layer 3: Hot core — quadratic falloff for sharp bright center
                     float cd = d / v_coreRatio;
                     float coreA = 0.0;
                     if (cd < 1.0) {
                         coreA = v_coreColor.a * (1.0 - cd * cd);
                     }
 
+                    // Additive composite of all 3 layers (premultiplied alpha)
                     vec3 col = glowC * glowA + bodyC * bodyA + v_coreColor.rgb * coreA;
                     float a = min(glowA + bodyA + coreA, 1.0);
                     gl_FragColor = vec4(col, a);
@@ -1112,6 +1236,12 @@
         // ══════════════════════════════════════════════════
         // FADE PROGRAM — trail/smoke effect
         // ══════════════════════════════════════════════════
+        // Draws a fullscreen black quad at 15% opacity each frame.
+        // With blendFuncSeparate(SRC_ALPHA, ONE_MINUS_SRC_ALPHA, ZERO, ONE_MINUS_SRC_ALPHA):
+        //   color: dst * 0.85 + 0 → dims existing pixels by 15%
+        //   alpha: dst * 0.85     → fades alpha too
+        // Since the canvas is never cleared, this creates a motion trail /
+        // smoke effect where older ember positions gradually darken.
         const fadeProg = linkProg(
             compile(gl.VERTEX_SHADER, `
                 attribute vec2 a_pos;
@@ -1119,6 +1249,7 @@
             `),
             compile(gl.FRAGMENT_SHADER, `
                 precision mediump float;
+                // Black with 15% opacity — dims the entire canvas each frame
                 void main() { gl_FragColor = vec4(0.0, 0.0, 0.0, 0.15); }
             `)
         );
@@ -1265,6 +1396,7 @@
         // ── Init & start ──
         let time = 0;
         let started = false;
+        let lastLogTime = 0;
 
         requestAnimationFrame(() => {
             resize();
@@ -1281,21 +1413,31 @@
         });
 
         function animate() {
+            const enableTrails = true;
+            
             if (!started) return;
 
-            // ── 1. FADE PASS (to screen) ──
-            gl.viewport(0, 0, canvasW, canvasH);
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            gl.useProgram(fadeProg);
-            gl.blendFuncSeparate(
-                gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA,
-                gl.ZERO, gl.ONE_MINUS_SRC_ALPHA
-            );
-            gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
-            gl.enableVertexAttribArray(fadeLoc.pos);
-            gl.vertexAttribPointer(fadeLoc.pos, 2, gl.FLOAT, false, 0, 0);
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-            gl.disableVertexAttribArray(fadeLoc.pos);
+            if (enableTrails) {
+                // ── 1. FADE PASS (to screen) ──
+                gl.viewport(0, 0, canvasW, canvasH);
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+                gl.useProgram(fadeProg);
+                gl.blendFuncSeparate(
+                    gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA,
+                    gl.ZERO, gl.ONE_MINUS_SRC_ALPHA
+                );
+                gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+                gl.enableVertexAttribArray(fadeLoc.pos);
+                gl.vertexAttribPointer(fadeLoc.pos, 2, gl.FLOAT, false, 0, 0);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                gl.disableVertexAttribArray(fadeLoc.pos);
+            } else {
+                // ── 1. CLEAR (no trails) ──
+                gl.viewport(0, 0, canvasW, canvasH);
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+            }
+
 
             // ── 2. SIMULATION PASS (to FBO) ──
             time++;
@@ -1355,6 +1497,13 @@
             prevMX = mouseX;
             prevMY = mouseY;
             clickActive = false;
+
+            // Log ember count once per second
+            const now = performance.now();
+            if (now - lastLogTime >= 1000) {
+                console.log(`Embers: ${NUM_EMBERS}`);
+                lastLogTime = now;
+            }
 
             requestAnimationFrame(animate);
         }

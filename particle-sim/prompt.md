@@ -1,0 +1,1 @@
+You are to generate a single HTML file that renders 1000 particles that move in random directions. Do this in the index.html file.
