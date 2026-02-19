@@ -646,6 +646,7 @@
 
 <!-- CTA -->
 <section class="cta-section">
+    <canvas class="embers-canvas" id="embersCanvas2"></canvas>
     <div class="cta-glow"></div>
     <div class="cta-content reveal">
         <div class="section-label">Book Your Event</div>
@@ -713,8 +714,8 @@
     });
 
     // ── BURNING EMBERS (Full GPU Simulation via Ping-Pong Textures) ──
-    (function() {
-        const canvas = document.getElementById('embersCanvas');
+    function initEmbers(canvasId) {
+        const canvas = document.getElementById(canvasId);
         const gl = canvas.getContext('webgl', {
             alpha: false,
             preserveDrawingBuffer: true
@@ -1502,7 +1503,10 @@
                 requestAnimationFrame(animate);
             }
         }
-    })();
+    }
+
+    initEmbers('embersCanvas');
+    initEmbers('embersCanvas2');
 </script>
 </body>
 </html>
