@@ -2,70 +2,81 @@
 <html>
 <head>
     <title>Main Landing Page</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body {
+        {
+            box-sizing: border-box; /* Ensures padding and borders are included in the element's total width and height */
+            margin: 0;
+            padding: 0;
+        }
+        
+        html, body {
             font-family: Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin-top: 100px;
-        }
-
-        .button-container {
-            display: grid;
-            grid-template-columns: 1fr;
-            grid-template-rows: auto;
-            gap: 15px;
-            width: 600px;
-        }
-
-        .full-width-button {
-            grid-column: 1;
+            /*margin-top: 100px;*/
+            padding: 10px;
+            box-sizing: border-box;
+            height: 100%;
             width: 100%;
         }
 
-        .side-by-side-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            grid-column: 1;
-        }
-
         button {
-            padding: 12px;
-            font-size: 16px;
+            flex: 1; /* Forces all buttons to grow and fill the row equally */
+            padding: 2%;
+            font-size: 2rem; /* clamp(14px, 2vh, 50px); */
             cursor: pointer;
             border: none;
-            border-radius: 6px;
+            border-radius: 10px;
             background-color: #2c3e50;
             color: white;
             transition: background-color 0.2s ease;
             text-align: center;
+            /*min-height: 50px;*/
+        }
+
+
+        .dynamic-grid {
+            width: clamp(150px, 100%, 800px);
+            height: 50%;
+            display: grid;
+            /* Creates as many 150px columns as will fit, then fills remaining space */
+            grid-template-columns: repeat(1, minmax(70px, 1fr));
+            gap: 1%; /* Adds space between buttons */
+            padding: 10%;
+        }
+
+        .dynamic-grid-row {
+            display: flex;
+            gap: 2%;
+            width: 100%;
         }
 
         button:hover {
             background-color: #34495e;
         }
+        
     </style>
 </head>
 <body>
 
 <h1>Welcome</h1>
 
-<div class="button-container">
-    <button class="full-width-button" onclick="location.href='version_1.html'">Page 1</button>
-    <div class="side-by-side-buttons">
+<div class="dynamic-grid">
+    <button onclick="location.href='version_1.html'">Page 1</button>
+    <div class="dynamic-grid-row">
         <button onclick="location.href='version_2.html'">Page 2</button>
         <button onclick="location.href='version_2.5.html'">Page 2.5</button>
     </div>
-    <button class="full-width-button" onclick="location.href='version_3.html'">Page 3</button>
-    <button class="full-width-button" onclick="location.href='version_4.html'">Page 4</button>
-    <button class="full-width-button" onclick="location.href='version_5.html'">Page 5</button>
-    <button class="full-width-button" onclick="location.href='version_6.html'">Page 6</button>
-    <button class="full-width-button" onclick="location.href='version_7.html'">Page 7</button>
-    <button class="full-width-button" onclick="location.href='version_8.html'">Page 8</button>
-    <button class="full-width-button" onclick="location.href='version_9.html'">Page 9</button>
-    <button class="full-width-button" onclick="location.href='version_9.html'">Page 10</button>
+    <button onclick="location.href='version_3.html'">Page 3</button>
+    <button onclick="location.href='version_4.html'">Page 4</button>
+    <button onclick="location.href='version_5.html'">Page 5</button>
+    <button onclick="location.href='version_6.html'">Page 6</button>
+    <button onclick="location.href='version_7.html'">Page 7</button>
+    <button onclick="location.href='version_8.html'">Page 8</button>
+    <button onclick="location.href='version_9.html'">Page 9</button>
+    <button onclick="location.href='version_9.html'">Page 10</button>
 </div>
 
 </body>

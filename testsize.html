@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Full Screen Grid</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        * {
+            box-sizing: border-box; /* Ensures padding and borders are included in the element's total width and height */
+            margin: 0;
+            padding: 0;
+        }
+
+        /* 2. Ensure html and body take up full height */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* 3. The Grid Container */
+        .grid-container {
+            display: grid;
+            /* Use vh (viewport height) to ensure the container spans the full height of the browser window */
+            height: 100vh;
+            /* Define the grid layout */
+            grid-template-columns: 1fr 3fr; /* One column for sidebar (1fr), three for main content (3fr) */
+            grid-template-rows: auto 1fr auto; /* Header and footer size automatically based on content; main content takes remaining space (1fr) */
+            grid-template-areas:
+        "header header"
+        "sidebar main"
+        "footer footer";
+        }
+
+        .button-grid {
+            display: grid;
+            /* Creates as many 150px columns as will fit, then fills remaining space */
+            grid-template-columns: repeat(2, minmax(70px, 1fr));
+            gap: 15px; /* Adds space between buttons */
+            padding: 2%;
+        }
+
+        .button-grid button {
+            /* Minimum 14px, Scales with 2% of viewport width, Maximum 24px */
+            font-size: clamp(14px, 2vw, 24px);
+        }
+
+        /* 4. Placing items within the grid areas */
+        header {
+            grid-area: header;
+            background-color: lightcoral;
+            padding: 1em;
+        }
+
+        aside {
+            grid-area: sidebar;
+            background-color: lightskyblue;
+            padding: 1em;
+        }
+
+        main {
+            grid-area: main;
+            background-color: lightgoldenrodyellow;
+            padding: 1em;
+        }
+
+        footer {
+            grid-area: footer;
+            background-color: lightgreen;
+            padding: 1em;
+        }
+    </style>
+</head>
+<body>
+<div class="grid-container">
+    <header>Header</header>
+    <aside>Sidebar</aside>
+<!--    <main>Main Content</main>-->
+    <main class="main-content">
+        <!-- Your other content here -->
+        <div class="button-grid">
+            <button>Action 1</button>
+            <button>Action 2</button>
+            <button>Action 3</button>
+            <button>Action 4</button>
+            <button>Action 5</button>
+            <button>Action 6</button>
+            <div class="button-grid">
+                <button>Action 7</button>
+                <button>Action 7.5</button>
+            </div>
+        </div>
+    </main>
+    <footer>Footer</footer>
+</div>
+</body>
+</html>
