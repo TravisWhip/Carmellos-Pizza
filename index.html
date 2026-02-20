@@ -12,10 +12,23 @@
         }
 
         .button-container {
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-template-rows: auto;
             gap: 15px;
-            width: 200px;
+            width: 600px;
+        }
+
+        .full-width-button {
+            grid-column: 1;
+            width: 100%;
+        }
+
+        .side-by-side-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            grid-column: 1;
         }
 
         button {
@@ -27,6 +40,7 @@
             background-color: #2c3e50;
             color: white;
             transition: background-color 0.2s ease;
+            text-align: center;
         }
 
         button:hover {
@@ -39,17 +53,19 @@
 <h1>Welcome</h1>
 
 <div class="button-container">
-    <button onclick="location.href='version_1.html'">Page 1</button>
-    <button onclick="location.href='version_2.html'">Page 2</button>
-    <button onclick="location.href='version_2.5.html'">Page 2.5</button>
-    <button onclick="location.href='version_3.html'">Page 3</button>
-    <button onclick="location.href='version_4.html'">Page 4</button>
-    <button onclick="location.href='version_5.html'">Page 5</button>
-    <button onclick="location.href='version_6.html'">Page 6</button>
-    <button onclick="location.href='version_7.html'">Page 7</button>
-    <button onclick="location.href='version_8.html'">Page 8</button>
-    <button onclick="location.href='version_9.html'">Page 9</button>
-    <button onclick="location.href='version_9.html'">Page 10</button>
+    <button class="full-width-button" onclick="location.href='version_1.html'">Page 1</button>
+    <div class="side-by-side-buttons">
+        <button onclick="location.href='version_2.html'">Page 2</button>
+        <button onclick="location.href='version_2.5.html'">Page 2.5</button>
+    </div>
+    <button class="full-width-button" onclick="location.href='version_3.html'">Page 3</button>
+    <button class="full-width-button" onclick="location.href='version_4.html'">Page 4</button>
+    <button class="full-width-button" onclick="location.href='version_5.html'">Page 5</button>
+    <button class="full-width-button" onclick="location.href='version_6.html'">Page 6</button>
+    <button class="full-width-button" onclick="location.href='version_7.html'">Page 7</button>
+    <button class="full-width-button" onclick="location.href='version_8.html'">Page 8</button>
+    <button class="full-width-button" onclick="location.href='version_9.html'">Page 9</button>
+    <button class="full-width-button" onclick="location.href='version_9.html'">Page 10</button>
 </div>
 
 </body>
